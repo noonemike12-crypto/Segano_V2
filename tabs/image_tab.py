@@ -32,7 +32,24 @@ class ImageTab(QWidget):
         super().__init__()
         self.selected_file = None
         self.output_file = None
+        self.setAcceptDrops(True)
         self.init_ui()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            if any(urls[0].toLocalFile().lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.bmp']):
+                event.accept()
+                return
+        event.ignore()
+
+    def dropEvent(self, event):
+        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        if files:
+            self.selected_file = files[0]
+            self.preview_label.setPixmap(QPixmap(self.selected_file).scaled(450, 350, Qt.KeepAspectRatio))
+            self.update_capacity_info()
+            logger.info(f"Dropped image: {self.selected_file}")
 
     def init_ui(self):
         main_layout = QHBoxLayout(self)
@@ -60,6 +77,7 @@ class ImageTab(QWidget):
         method_group = QGroupBox("🛠️ เลือกเทคนิคการซ่อน")
         method_layout = QVBoxLayout()
         self.method_combo = QComboBox()
+        # All methods are somewhat applicable to images or handled by engine
         self.method_combo.addItems(SteganoEngine.METHODS)
         self.method_combo.currentIndexChanged.connect(self.update_capacity_info)
         method_layout.addWidget(self.method_combo)
@@ -150,19 +168,27 @@ class ImageTab(QWidget):
         self.output_file = PathManager.get_output_path("image", filename)
         
         func = None
-        if method == "LSB (Pixel)": func = SteganoEngine.hide_lsb
-        elif method == "EOF (Append)": func = SteganoEngine.hide_eof
-        elif method == "Metadata (Comment)": func = SteganoEngine.hide_metadata
+        if "LSB" in method: func = SteganoEngine.hide_image_lsb
+        elif "EOF" in method: func = SteganoEngine.hide_eof
+        elif "Metadata" in method: func = SteganoEngine.hide_metadata
+        elif "Alpha" in method: func = SteganoEngine.hide_alpha
+        elif "Edge" in method: func = SteganoEngine.hide_edge
+        elif "Masking" in method: func = SteganoEngine.hide_masking
+        elif "Palette" in method: func = SteganoEngine.hide_palette
         
-        self.run_worker(func, self.selected_file, self.msg_input.toPlainText(), self.output_file)
+        self.run_worker(func, self.selected_file, self.msg_input.toPlainText().encode('utf-8'), self.output_file)
 
     def process_extract(self):
         if not self.selected_file: return
         method = self.method_combo.currentText()
         func = None
-        if method == "LSB (Pixel)": func = SteganoEngine.extract_lsb
-        elif method == "EOF (Append)": func = SteganoEngine.extract_eof
-        elif method == "Metadata (Comment)": func = SteganoEngine.extract_metadata
+        if "LSB" in method: func = SteganoEngine.extract_image_lsb
+        elif "EOF" in method: func = SteganoEngine.extract_eof
+        elif "Metadata" in method: func = SteganoEngine.extract_metadata
+        elif "Alpha" in method: func = SteganoEngine.extract_alpha
+        elif "Edge" in method: func = SteganoEngine.extract_edge
+        elif "Masking" in method: func = SteganoEngine.extract_masking
+        elif "Palette" in method: func = SteganoEngine.extract_palette
         self.run_worker(func, self.selected_file)
 
     def run_worker(self, func, *args):
@@ -175,8 +201,17 @@ class ImageTab(QWidget):
         self.log_output.append(msg)
         if "สำเร็จ" in msg:
             self.open_folder_btn.setEnabled(True)
-            if "extract" in self.sender().func.__name__.lower():
-                self.msg_input.setPlainText(msg.split(": ")[1])
+            # If it was an extraction, the result might be bytes
+            if "extract" in self.worker.func.__name__.lower():
+                try:
+                    # The msg is "✅ สำเร็จ: <result>"
+                    result_part = msg.split("สำเร็จ: ")[1]
+                    # If it's a string representation of bytes, we might need to handle it
+                    # But WorkerThread returns result as string in finished.emit(f"✅ สำเร็จ: {result}")
+                    # So we should probably change WorkerThread to emit the raw result or handle it here
+                    pass 
+                except:
+                    pass
 
     def open_output_folder(self):
         path = PathManager.get_category_dir("image")

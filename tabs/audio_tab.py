@@ -1,146 +1,230 @@
 import os
-import uuid
 import wave
 import numpy as np
 from PyQt5.QtWidgets import (
-  QWidget, QVBoxLayout, QPushButton, QLabel, QFileDialog, QHBoxLayout,
-  QGroupBox, QComboBox, QTextEdit, QFrame, QGridLayout, QSplitter,
-  QScrollArea
+    QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, 
+    QPushButton, QLabel, QFileDialog, QTextEdit, QProgressBar, QFrame, QComboBox, QScrollArea
 )
-from PyQt5.QtGui import QPixmap, QDesktopServices, QFont, QIcon
-from PyQt5.QtCore import Qt, QUrl, QThread, pyqtSignal
-from pydub import AudioSegment
-import soundfile as sf
+from PyQt5.QtGui import QDesktopServices
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
 import sounddevice as sd
-import utils.steganography as steganography
+import soundfile as sf
+from utils.stegano_engine import SteganoEngine
+from utils.logger import logger
+from utils.path_manager import PathManager
+
+class WorkerThread(QThread):
+    finished = pyqtSignal(str, object)
+    progress = pyqtSignal(int)
+
+    def __init__(self, func, *args):
+        super().__init__()
+        self.func = func
+        self.args = args
+
+    def run(self):
+        try:
+            result = self.func(*self.args)
+            self.finished.emit("SUCCESS", result)
+        except Exception as e:
+            self.finished.emit("ERROR", str(e))
 
 class AudioTab(QWidget):
     def __init__(self):
         super().__init__()
-        self.selected_audio_path = "ไม่ได้เลือกไฟล์" 
-        self.total_bits = 0
-        self.initUI()
-        self.load_example_audio()
+        self.selected_file = None
+        self.output_file = None
+        self.max_bits = 0
         self.setAcceptDrops(True)
-        self.audio_message_input.textChanged.connect(self.show_used_bits)
-        
-    def initUI(self):
-        self.setStyleSheet("""
-            QWidget { background: transparent; color: #ffffff; font-family: 'Segoe UI', 'Roboto', Arial, sans-serif; }
-            QGroupBox { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2d2d44, stop:1 #1e1e2e); border: 2px solid #00d4ff; border-radius: 12px; margin-top: 10px; padding: 15px; font-size: 14px; font-weight: bold; color: #00d4ff; }
-            QFrame#card { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3a3a54, stop:1 #2a2a3e); border: 1px solid #555; border-radius: 10px; padding: 12px; margin: 3px; }
-            QPushButton { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #4a90e2, stop:1 #357abd); color: white; border: none; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: bold; min-height: 18px; }
-            QPushButton#hideButton { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #8e24aa, stop:1 #5e35b1); }
-            QPushButton#extractButton { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ff9800, stop:1 #fb8c00); }
-            QTextEdit { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1e1e2e, stop:1 #2d2d44); color: #ffffff; border: 2px solid #555; border-radius: 8px; font-family: 'Consolas', 'Monaco', monospace; font-size: 12px; padding: 10px; }
-            QLabel#audioPathLabel { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #1e1e2e, stop:0.5 #2d2d44, stop:1 #1e1e2e); border: 2px dashed #00d4ff; border-radius: 12px; color: #888; font-size: 14px; font-style: italic; padding: 15px; min-height: 60px; }
-        """)
-        
+        self.init_ui()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            if any(urls[0].toLocalFile().lower().endswith(ext) for ext in ['.wav', '.mp3', '.flac']):
+                event.accept()
+                return
+        event.ignore()
+
+    def dropEvent(self, event):
+        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        if files:
+            self.selected_file = files[0]
+            self.file_label.setText(os.path.basename(self.selected_file))
+            self.update_capacity()
+            logger.info(f"Dropped audio: {self.selected_file}")
+
+    def init_ui(self):
         main_layout = QVBoxLayout(self)
-        scroll_area = QScrollArea(self)
-        scroll_area.setWidgetResizable(True)
-        scroll_content_widget = QWidget()
-        scroll_content_layout = QVBoxLayout(scroll_content_widget)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        layout = QVBoxLayout(content)
 
-        audio_group = QGroupBox("🎵 Audio File Management")
-        audio_layout = QVBoxLayout()
+        # File Selection
+        file_group = QGroupBox("🎵 1. เลือกไฟล์เสียง (Source Audio)")
+        file_layout = QVBoxLayout()
+        self.file_label = QLabel("ยังไม่ได้เลือกไฟล์...")
+        self.file_label.setStyleSheet("background: #0f0f1a; border: 2px dashed #2d2d44; padding: 20px; border-radius: 10px; color: #888;")
+        self.file_label.setAlignment(Qt.AlignCenter)
         
-        file_selection_layout = QHBoxLayout()
-        self.example_audio_dropdown = QComboBox()
-        self.example_audio_dropdown.currentIndexChanged.connect(self.select_example_audio)
-        self.select_audio_button = QPushButton("🔍 Browse Audio")
-        self.select_audio_button.clicked.connect(self.select_audio)
-        file_selection_layout.addWidget(self.example_audio_dropdown, 1)
-        file_selection_layout.addWidget(self.select_audio_button, 1)
-        audio_layout.addLayout(file_selection_layout)
+        btn_layout = QHBoxLayout()
+        self.browse_btn = QPushButton("🔍 เลือกไฟล์ .WAV / .MP3")
+        self.browse_btn.clicked.connect(self.browse_audio)
+        self.play_btn = QPushButton("▶️ เล่นเสียง")
+        self.play_btn.clicked.connect(self.play_audio)
+        self.stop_btn = QPushButton("⏹️ หยุด")
+        self.stop_btn.clicked.connect(lambda: sd.stop())
+        btn_layout.addWidget(self.browse_btn)
+        btn_layout.addWidget(self.play_btn)
+        btn_layout.addWidget(self.stop_btn)
         
-        self.audio_path_label = QLabel("No file selected")
-        self.audio_path_label.setObjectName("audioPathLabel")
-        audio_layout.addWidget(self.audio_path_label)
-        
-        playback_layout = QHBoxLayout()
-        self.play_btn = QPushButton("Play")
-        self.play_btn.clicked.connect(self.reset_audio)
-        self.stop_btn = QPushButton("Stop")
-        self.stop_btn.clicked.connect(self.stop_audio)
-        playback_layout.addWidget(self.play_btn)
-        playback_layout.addWidget(self.stop_btn)
-        audio_layout.addLayout(playback_layout)
-        
-        audio_group.setLayout(audio_layout)
-        scroll_content_layout.addWidget(audio_group)
+        file_layout.addWidget(self.file_label)
+        file_layout.addLayout(btn_layout)
+        file_group.setLayout(file_layout)
+        layout.addWidget(file_group)
 
-        msg_group = QGroupBox("💬 Message")
+        # Technique & Capacity
+        tech_group = QGroupBox("🛠️ 2. เทคนิคและข้อมูลความจุ")
+        tech_layout = QHBoxLayout()
+        self.method_combo = QComboBox()
+        self.method_combo.addItems([m for m in SteganoEngine.METHODS if any(x in m for x in ["LSB", "EOF", "Metadata"])])
+        self.method_combo.currentIndexChanged.connect(self.update_capacity)
+        
+        self.cap_label = QLabel("ความจุ: -")
+        self.cap_label.setStyleSheet("color: #00d4ff; font-weight: bold;")
+        
+        tech_layout.addWidget(QLabel("เทคนิค:"))
+        tech_layout.addWidget(self.method_combo, 1)
+        tech_layout.addWidget(self.cap_label, 1)
+        tech_group.setLayout(tech_layout)
+        layout.addWidget(tech_group)
+
+        # Message Input
+        msg_group = QGroupBox("📝 3. ข้อความลับ (Secret Message)")
         msg_layout = QVBoxLayout()
-        self.audio_message_input = QTextEdit()
-        self.remaining_bits_label = QLabel("Capacity: N/A")
-        msg_layout.addWidget(self.audio_message_input)
-        msg_layout.addWidget(self.remaining_bits_label)
+        self.msg_input = QTextEdit()
+        self.msg_input.setPlaceholderText("พิมพ์ข้อความที่ต้องการซ่อน...")
+        self.msg_input.textChanged.connect(self.check_limit)
+        self.limit_label = QLabel("ใช้ไป: 0 bits")
+        
+        action_layout = QHBoxLayout()
+        self.hide_btn = QPushButton("🔒 ซ่อนข้อความ")
+        self.hide_btn.setObjectName("primaryBtn")
+        self.hide_btn.clicked.connect(self.process_hide)
+        self.extract_btn = QPushButton("🔓 ถอดข้อความ")
+        self.extract_btn.setObjectName("secondaryBtn")
+        self.extract_btn.clicked.connect(self.process_extract)
+        action_layout.addWidget(self.hide_btn)
+        action_layout.addWidget(self.extract_btn)
+        
+        self.open_folder_btn = QPushButton("📂 เปิดโฟลเดอร์ผลลัพธ์")
+        self.open_folder_btn.setEnabled(False)
+        self.open_folder_btn.clicked.connect(self.open_output_folder)
+        
+        self.progress_bar = QProgressBar()
+        msg_layout.addWidget(self.msg_input)
+        msg_layout.addWidget(self.limit_label)
+        msg_layout.addLayout(action_layout)
+        msg_layout.addWidget(self.open_folder_btn)
+        msg_layout.addWidget(self.progress_bar)
         msg_group.setLayout(msg_layout)
-        scroll_content_layout.addWidget(msg_group)
+        layout.addWidget(msg_group)
 
-        actions_group = QGroupBox("🚀 Actions")
-        actions_layout = QHBoxLayout()
-        self.hide_btn = QPushButton("🔒 Hide")
-        self.hide_btn.setObjectName("hideButton")
-        self.hide_btn.clicked.connect(self.hide_message_in_audio)
-        self.extract_btn = QPushButton("🔓 Extract")
-        self.extract_btn.setObjectName("extractButton")
-        self.extract_btn.clicked.connect(self.extract_message_from_audio)
-        actions_layout.addWidget(self.hide_btn)
-        actions_layout.addWidget(self.extract_btn)
-        actions_group.setLayout(actions_layout)
-        scroll_content_layout.addWidget(actions_group)
+        # Logs
+        log_group = QGroupBox("📊 4. บันทึกการทำงาน")
+        log_layout = QVBoxLayout()
+        self.log_output = QTextEdit()
+        self.log_output.setReadOnly(True)
+        log_layout.addWidget(self.log_output)
+        log_group.setLayout(log_layout)
+        layout.addWidget(log_group)
 
-        self.result_output = QTextEdit()
-        self.result_output.setReadOnly(True)
-        scroll_content_layout.addWidget(self.result_output)
+        scroll.setWidget(content)
+        main_layout.addWidget(scroll)
 
-        scroll_area.setWidget(scroll_content_widget)
-        main_layout.addWidget(scroll_area)
-
-    def load_example_audio(self):
-        path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "audioexample")
-        if os.path.exists(path):
-            files = [f for f in os.listdir(path) if f.endswith(('.wav', '.mp3'))]
-            self.example_audio_dropdown.addItems(files)
-
-    def select_example_audio(self):
-        fname = self.example_audio_dropdown.currentText()
-        if fname:
-            self.selected_audio_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "audioexample", fname)
-            self.audio_path_label.setText(fname)
-            self.calculate_total_bits()
-
-    def select_audio(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Select Audio", "", "Audio (*.wav *.mp3)")
+    def browse_audio(self):
+        path, _ = QFileDialog.getOpenFileName(self, "เลือกไฟล์เสียง", "", "Audio (*.wav *.mp3 *.flac)")
         if path:
-            self.selected_audio_path = path
-            self.audio_path_label.setText(os.path.basename(path))
-            self.calculate_total_bits()
+            self.selected_file = path
+            self.file_label.setText(os.path.basename(path))
+            self.update_capacity()
+            self.log_output.append(f"📂 โหลดไฟล์: {os.path.basename(path)}")
 
-    def stop_audio(self): sd.stop()
-    def reset_audio(self):
-        if os.path.exists(self.selected_audio_path):
-            data, sr = sf.read(self.selected_audio_path)
-            sd.play(data, sr)
+    def play_audio(self):
+        if self.selected_file and os.path.exists(self.selected_file):
+            try:
+                data, sr = sf.read(self.selected_file)
+                sd.play(data, sr)
+            except Exception as e:
+                self.log_output.append(f"❌ เล่นเสียงไม่ได้: {e}")
 
-    def calculate_total_bits(self):
-        try:
-            with wave.open(self.selected_audio_path, 'rb') as f:
-                self.total_bits = f.getnframes() * f.getnchannels() * f.getsampwidth() * 8
-            self.show_used_bits()
-        except: pass
+    def update_capacity(self):
+        if not self.selected_file: return
+        method = self.method_combo.currentText()
+        cap_info = SteganoEngine.get_capacity(self.selected_file, method)
+        if isinstance(cap_info, dict):
+            self.max_bits = cap_info['total_bits']
+            self.cap_label.setText(f"ความจุ: {self.max_bits:,} bits")
+        else:
+            self.max_bits = cap_info * 8
+            self.cap_label.setText(f"ความจุ: {self.max_bits:,} bits")
+        self.check_limit()
 
-    def show_used_bits(self):
-        used = len(self.audio_message_input.toPlainText()) * 8
-        self.remaining_bits_label.setText(f"Capacity: {self.total_bits} | Used: {used}")
+    def check_limit(self):
+        text = self.msg_input.toPlainText()
+        used_bits = len(text.encode('utf-8')) * 8
+        color = "#00ff88" if used_bits <= self.max_bits else "#ff4444"
+        self.limit_label.setText(f"ใช้ไป: {used_bits:,} / {self.max_bits:,} bits")
+        self.limit_label.setStyleSheet(f"color: {color}; font-weight: bold;")
+        self.hide_btn.setEnabled(used_bits <= self.max_bits)
 
-    def hide_message_in_audio(self):
-        # Implementation from snippet
-        self.result_output.append("Processing audio steganography...")
-        # (Rest of logic from snippet)
+    def process_hide(self):
+        if not self.selected_file: return
+        method = self.method_combo.currentText()
+        filename = f"stego_{os.path.basename(self.selected_file)}"
+        if "LSB" in method: filename = os.path.splitext(filename)[0] + ".wav"
+        self.output_file = PathManager.get_output_path("audio", filename)
+        
+        func = None
+        if "LSB" in method: func = SteganoEngine.hide_audio_lsb
+        elif "EOF" in method: func = SteganoEngine.hide_eof
+        elif "Metadata" in method: func = SteganoEngine.hide_metadata
+        elif "Alpha" in method: func = SteganoEngine.hide_alpha
+        elif "Edge" in method: func = SteganoEngine.hide_edge
+        
+        data = self.msg_input.toPlainText().encode('utf-8')
+        
+        self.worker = WorkerThread(func, self.selected_file, data, self.output_file)
+        self.worker.finished.connect(self.on_finished)
+        self.worker.start()
 
-    def extract_message_from_audio(self):
-        # Implementation from snippet
-        self.result_output.append("Extracting from audio...")
+    def process_extract(self):
+        if not self.selected_file: return
+        method = self.method_combo.currentText()
+        func = None
+        if "LSB" in method: func = SteganoEngine.extract_audio_lsb
+        elif "EOF" in method: func = SteganoEngine.extract_eof
+        elif "Metadata" in method: func = SteganoEngine.extract_metadata
+        elif "Alpha" in method: func = SteganoEngine.extract_alpha
+        elif "Edge" in method: func = SteganoEngine.extract_edge
+        
+        self.worker = WorkerThread(func, self.selected_file)
+        self.worker.finished.connect(self.on_finished)
+        self.worker.start()
+
+    def on_finished(self, status, result):
+        if status == "SUCCESS":
+            self.log_output.append(f"✅ สำเร็จ: {result}")
+            self.open_folder_btn.setEnabled(True)
+            if isinstance(result, bytes):
+                try: self.msg_input.setPlainText(result.decode('utf-8'))
+                except: pass
+            elif isinstance(result, str) and "extract" in self.sender().func.__name__.lower():
+                self.msg_input.setPlainText(result)
+        else:
+            self.log_output.append(f"❌ ข้อผิดพลาด: {result}")
+
+    def open_output_folder(self):
+        path = PathManager.get_category_dir("audio")
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
