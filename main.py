@@ -1,10 +1,10 @@
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTabWidget, QLabel, QFrame, QHBoxLayout
-from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTabWidget, QLabel, QFrame, QHBoxLayout, QGraphicsDropShadowEffect
+from PyQt5.QtGui import QIcon, QColor
 from PyQt5.QtCore import Qt
 
-from utils.styles import get_main_style
+from utils.styles import get_modern_style
 import tabs.image_tab as image_tab
 import tabs.audio_tab as audio_tab
 import tabs.video_tab as video_tab
@@ -16,46 +16,86 @@ class SIENGApp(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("SIENG : Secure Incognito ENcryption Guard")
-        self.setMinimumSize(1200, 850)
-        self.setStyleSheet(get_main_style())
+        self.setMinimumSize(1280, 850)
+        self.setStyleSheet(get_modern_style())
         self.init_ui()
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        # Header
+        # --- Modern Header ---
         header = QFrame()
         header.setObjectName("headerFrame")
-        header.setFixedHeight(80)
+        header.setFixedHeight(100)
         h_layout = QHBoxLayout(header)
-        title = QLabel("🔒 SIENG SUITE")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #00d4ff;")
-        subtitle = QLabel("Advanced Steganography & Encryption")
-        subtitle.setStyleSheet("color: #888; font-style: italic;")
-        h_layout.addWidget(title)
+        h_layout.setContentsMargins(30, 0, 30, 0)
+
+        title_vbox = QVBoxLayout()
+        title = QLabel("SIENG PRO")
+        title.setStyleSheet("font-size: 28px; font-weight: 800; color: #00d4ff; letter-spacing: 2px;")
+        subtitle = QLabel("SECURE INCOGNITO ENCRYPTION GUARD")
+        subtitle.setStyleSheet("color: #666; font-size: 10px; font-weight: bold; letter-spacing: 1px;")
+        title_vbox.addWidget(title)
+        title_vbox.addWidget(subtitle)
+        title_vbox.setSpacing(0)
+        
+        h_layout.addLayout(title_vbox)
         h_layout.addStretch()
-        h_layout.addWidget(subtitle)
+        
+        status_badge = QLabel("🛡️ SYSTEM SECURE")
+        status_badge.setStyleSheet("""
+            background-color: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            padding: 5px 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            font-size: 11px;
+            font-weight: bold;
+        """)
+        h_layout.addWidget(status_badge)
+        
         main_layout.addWidget(header)
 
-        # Tabs
-        self.tabs = QTabWidget()
-        self.tabs.addTab(image_tab.ImageTab(), "🖼️ Image")
-        self.tabs.addTab(audio_tab.AudioTab(), "🎵 Audio")
-        self.tabs.addTab(video_tab.VideoTab(), "🎬 Video")
-        self.tabs.addTab(encryption_tab.EncryptionTab(), "🔐 Encryption")
-        self.tabs.addTab(pgp_tab.PGPTab(), "🔑 PGP")
-        self.tabs.addTab(integrated_mode_tab.IntegrationTab(), "🔗 Integrated")
-        
-        main_layout.addWidget(self.tabs)
+        # --- Content Area ---
+        content_frame = QFrame()
+        content_layout = QVBoxLayout(content_frame)
+        content_layout.setContentsMargins(20, 10, 20, 20)
 
-        # Footer
-        footer = QLabel("Ready | v2.0.1 Refactored")
-        footer.setStyleSheet("color: #555; font-size: 10px;")
-        main_layout.addWidget(footer, alignment=Qt.AlignRight)
+        self.tabs = QTabWidget()
+        self.tabs.addTab(image_tab.ImageTab(), "🖼️ IMAGE")
+        self.tabs.addTab(audio_tab.AudioTab(), "🎵 AUDIO")
+        self.tabs.addTab(video_tab.VideoTab(), "🎬 VIDEO")
+        self.tabs.addTab(encryption_tab.EncryptionTab(), "🔐 CRYPTO")
+        self.tabs.addTab(pgp_tab.PGPTab(), "🔑 PGP")
+        self.tabs.addTab(integrated_mode_tab.IntegrationTab(), "🔗 INTEGRATED")
+        
+        content_layout.addWidget(self.tabs)
+        main_layout.addWidget(content_frame)
+
+        # --- Footer ---
+        footer = QFrame()
+        footer.setFixedHeight(30)
+        footer.setStyleSheet("background-color: #0f0f1a; border-top: 1px solid #2d2d44;")
+        f_layout = QHBoxLayout(footer)
+        f_layout.setContentsMargins(20, 0, 20, 0)
+        
+        version = QLabel("v2.5.0 Professional Edition")
+        version.setStyleSheet("color: #444; font-size: 10px;")
+        f_layout.addWidget(version)
+        f_layout.addStretch()
+        
+        main_layout.addWidget(footer)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    
+    # Set app-wide font
+    font = app.font()
+    font.setFamily("Segoe UI")
+    app.setFont(font)
+    
     window = SIENGApp()
     window.show()
     sys.exit(app.exec_())
