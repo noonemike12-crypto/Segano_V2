@@ -1,218 +1,214 @@
 import os
+import uuid
+from datetime import datetime
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, 
-    QPushButton, QLabel, QFileDialog, QTextEdit, QProgressBar, QFrame, QComboBox
+    QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, 
+    QPushButton, QComboBox, QTextEdit, QProgressBar, QFrame, 
+    QFileDialog, QGridLayout
 )
-from PyQt5.QtGui import QPixmap, QDesktopServices
+from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
-from utils.stegano_engine import SteganoEngine
-from utils.logger import logger
-from utils.path_manager import PathManager
+from PyQt5.QtGui import QDesktopServices
 
-class WorkerThread(QThread):
-    finished = pyqtSignal(str)
-    progress = pyqtSignal(int)
-
-    def __init__(self, func, *args):
-        super().__init__()
-        self.func = func
-        self.args = args
-
-    def run(self):
-        try:
-            self.progress.emit(30)
-            result = self.func(*self.args)
-            self.progress.emit(100)
-            self.finished.emit(f"✅ สำเร็จ: {result}")
-        except Exception as e:
-            self.finished.emit(f"❌ ข้อผิดพลาด: {str(e)}")
+from utils.steganography import (
+    hide_lsb_image, extract_lsb_image,
+    hide_alpha_channel, extract_alpha_channel,
+    hide_edge_detection, extract_edge_detection
+)
+from utils.check_bit import (
+    get_image_capacity_lsb, get_image_capacity_alpha, get_image_capacity_edge
+)
 
 class ImageTab(QWidget):
     def __init__(self):
         super().__init__()
-        self.selected_file = None
-        self.output_file = None
-        self.setAcceptDrops(True)
+        self.selected_image = None
+        self.capacity = 0
         self.init_ui()
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            urls = event.mimeData().urls()
-            if any(urls[0].toLocalFile().lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.bmp']):
-                event.accept()
-                return
-        event.ignore()
-
-    def dropEvent(self, event):
-        files = [u.toLocalFile() for u in event.mimeData().urls()]
-        if files:
-            self.selected_file = files[0]
-            self.preview_label.setPixmap(QPixmap(self.selected_file).scaled(450, 350, Qt.KeepAspectRatio))
-            self.update_capacity_info()
-            logger.info(f"Dropped image: {self.selected_file}")
+        self.setAcceptDrops(True)
 
     def init_ui(self):
-        main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(20)
+        layout = QVBoxLayout(self)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
 
-        # Left Side
-        left_panel = QFrame()
-        left_layout = QVBoxLayout(left_panel)
+        # --- ส่วนเลือกภาพและตั้งค่า ---
+        config_group = QGroupBox("🖼️ การเลือกภาพและตั้งค่า (Image Selection & Config)")
+        config_layout = QGridLayout()
         
-        file_group = QGroupBox("📁 เลือกรูปภาพ")
-        file_vbox = QVBoxLayout()
-        self.preview_label = QLabel("ลากรูปภาพมาวางที่นี่")
-        self.preview_label.setFixedSize(450, 350)
-        self.preview_label.setStyleSheet("background-color: #0f0f1a; border: 2px dashed #2d2d44; border-radius: 20px; color: #555;")
-        self.preview_label.setAlignment(Qt.AlignCenter)
-        self.browse_btn = QPushButton("🔍 เลือกไฟล์")
+        config_layout.addWidget(QLabel("📁 เลือกภาพตัวอย่าง:"), 0, 0)
+        self.example_selector = QComboBox()
+        self.example_selector.addItems([f"ตัวอย่าง {i+1}" for i in range(10)])
+        self.example_selector.currentIndexChanged.connect(self.load_example_image)
+        config_layout.addWidget(self.example_selector, 0, 1)
+        
+        self.browse_btn = QPushButton("🔍 เลือกไฟล์ภาพ...")
         self.browse_btn.clicked.connect(self.browse_image)
-        file_vbox.addWidget(self.preview_label)
-        file_vbox.addWidget(self.browse_btn)
-        file_group.setLayout(file_vbox)
-        left_layout.addWidget(file_group)
+        config_layout.addWidget(self.browse_btn, 0, 2)
         
-        # Method Selection
-        method_group = QGroupBox("🛠️ เลือกเทคนิคการซ่อน")
-        method_layout = QVBoxLayout()
-        self.method_combo = QComboBox()
-        # All methods are somewhat applicable to images or handled by engine
-        self.method_combo.addItems(SteganoEngine.METHODS)
-        self.method_combo.currentIndexChanged.connect(self.update_capacity_info)
-        method_layout.addWidget(self.method_combo)
-        method_group.setLayout(method_layout)
-        left_layout.addWidget(method_group)
+        config_layout.addWidget(QLabel("⚙️ โหมดการซ่อน:"), 1, 0)
+        self.mode_selector = QComboBox()
+        self.mode_selector.addItems(["🔹 LSB (มาตรฐาน)", "🔍 Alpha Channel (PNG)", "📐 Edge Detection (ขอบภาพ)"])
+        self.mode_selector.currentIndexChanged.connect(self.update_capacity)
+        config_layout.addWidget(self.mode_selector, 1, 1, 1, 2)
+        
+        config_group.setLayout(config_layout)
+        layout.addWidget(config_group)
 
-        self.cap_group = QGroupBox("📊 ข้อมูลความจุ")
-        cap_layout = QVBoxLayout()
-        self.cap_label = QLabel("กรุณาเลือกรูปภาพ...")
-        cap_layout.addWidget(self.cap_label)
-        self.cap_group.setLayout(cap_layout)
-        left_layout.addWidget(self.cap_group)
-        left_layout.addStretch()
+        # --- ส่วนแสดงผลและข้อความ ---
+        content_layout = QHBoxLayout()
+        
+        # ฝั่งซ้าย: พรีวิวภาพ
+        preview_frame = QFrame()
+        preview_frame.setFrameShape(QFrame.StyledPanel)
+        preview_layout = QVBoxLayout(preview_frame)
+        
+        preview_layout.addWidget(QLabel("🖼️ ตัวอย่างภาพ:"))
+        self.image_preview = QLabel("ลากภาพมาวางที่นี่\nหรือกดปุ่มเลือกไฟล์")
+        self.image_preview.setAlignment(Qt.AlignCenter)
+        self.image_preview.setFixedSize(400, 300)
+        self.image_preview.setStyleSheet("border: 2px dashed #4a5568; border-radius: 10px; color: #718096;")
+        preview_layout.addWidget(self.image_preview)
+        
+        self.capacity_label = QLabel("📊 ความจุ: 0 บิต | ใช้ไป: 0 บิต")
+        self.capacity_label.setAlignment(Qt.AlignCenter)
+        preview_layout.addWidget(self.capacity_label)
+        
+        content_layout.addWidget(preview_frame)
+        
+        # ฝั่งขวา: ข้อความลับ
+        message_frame = QFrame()
+        message_layout = QVBoxLayout(message_frame)
+        
+        message_layout.addWidget(QLabel("✏️ ข้อความลับ:"))
+        self.message_input = QTextEdit()
+        self.message_input.setPlaceholderText("พิมพ์ข้อความที่ต้องการซ่อนที่นี่...")
+        self.message_input.textChanged.connect(self.update_capacity)
+        message_layout.addWidget(self.message_input)
+        
+        message_layout.addWidget(QLabel("📤 ผลลัพธ์:"))
+        self.result_output = QTextEdit()
+        self.result_output.setReadOnly(True)
+        self.result_output.setPlaceholderText("ผลลัพธ์การถอดรหัสจะแสดงที่นี่...")
+        message_layout.addWidget(self.result_output)
+        
+        content_layout.addWidget(message_frame)
+        layout.addLayout(content_layout)
 
-        # Right Side
-        right_panel = QFrame()
-        right_layout = QVBoxLayout(right_panel)
-        msg_group = QGroupBox("📝 ข้อความ (รองรับภาษาไทย)")
-        msg_vbox = QVBoxLayout()
-        self.msg_input = QTextEdit()
-        self.msg_input.textChanged.connect(self.check_input_limit)
-        self.limit_label = QLabel("ใช้ไป: 0 bits")
-        btn_layout = QHBoxLayout()
-        self.hide_btn = QPushButton("🔒 ซ่อนข้อความ")
+        # --- ส่วนปุ่มดำเนินการ ---
+        action_layout = QHBoxLayout()
+        
+        self.hide_btn = QPushButton("🔒 ซ่อนข้อความ (Hide)")
         self.hide_btn.setObjectName("primaryBtn")
         self.hide_btn.clicked.connect(self.process_hide)
-        self.extract_btn = QPushButton("🔓 ถอดข้อความ")
+        
+        self.extract_btn = QPushButton("🔓 ถอดข้อความ (Extract)")
         self.extract_btn.setObjectName("secondaryBtn")
         self.extract_btn.clicked.connect(self.process_extract)
-        btn_layout.addWidget(self.hide_btn)
-        btn_layout.addWidget(self.extract_btn)
-        self.open_folder_btn = QPushButton("📂 เปิดโฟลเดอร์ผลลัพธ์")
-        self.open_folder_btn.setEnabled(False)
-        self.open_folder_btn.clicked.connect(self.open_output_folder)
-        self.progress_bar = QProgressBar()
-        msg_vbox.addWidget(self.msg_input)
-        msg_vbox.addWidget(self.limit_label)
-        msg_vbox.addLayout(btn_layout)
-        msg_vbox.addWidget(self.open_folder_btn)
-        msg_vbox.addWidget(self.progress_bar)
-        msg_group.setLayout(msg_vbox)
         
-        log_group = QGroupBox("📊 บันทึกการทำงาน")
-        log_vbox = QVBoxLayout()
-        self.log_output = QTextEdit()
-        self.log_output.setReadOnly(True)
-        log_vbox.addWidget(self.log_output)
-        log_group.setLayout(log_vbox)
-        right_layout.addWidget(msg_group)
-        right_layout.addWidget(log_group)
+        self.folder_btn = QPushButton("📁 เปิดโฟลเดอร์ผลลัพธ์")
+        self.folder_btn.clicked.connect(self.open_output_folder)
+        
+        action_layout.addWidget(self.hide_btn)
+        action_layout.addWidget(self.extract_btn)
+        action_layout.addWidget(self.folder_btn)
+        
+        layout.addLayout(action_layout)
+        
+        self.progress_bar = QProgressBar()
+        layout.addWidget(self.progress_bar)
 
-        main_layout.addWidget(left_panel, 1)
-        main_layout.addWidget(right_panel, 1)
+    def load_image(self, path):
+        if not os.path.exists(path): return
+        self.selected_image = path
+        pixmap = QPixmap(path).scaled(400, 300, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.image_preview.setPixmap(pixmap)
+        self.image_preview.setStyleSheet("border: 1px solid #00d4ff; border-radius: 10px;")
+        self.update_capacity()
 
     def browse_image(self):
-        path, _ = QFileDialog.getOpenFileName(self, "เลือกรูปภาพ", "", "Images (*.png *.jpg *.bmp)")
-        if path:
-            self.selected_file = path
-            self.preview_label.setPixmap(QPixmap(path).scaled(450, 350, Qt.KeepAspectRatio))
-            self.update_capacity_info()
+        path, _ = QFileDialog.getOpenFileName(self, "เลือกไฟล์ภาพ", "", "Image Files (*.png *.jpg *.jpeg *.bmp)")
+        if path: self.load_image(path)
 
-    def update_capacity_info(self):
-        if not self.selected_file: return
-        method = self.method_combo.currentText()
-        cap = SteganoEngine.get_image_capacity(self.selected_file, method)
-        if cap:
-            self.current_cap = cap
-            info = (f"🔹 เทคนิค: {method}\n"
-                    f"🔤 อังกฤษ: {cap['eng_capacity']:,} ตัว\n"
-                    f"🇹🇭 ไทย: {cap['thai_capacity']:,} ตัว")
-            self.cap_label.setText(info)
-            self.check_input_limit()
+    def load_example_image(self):
+        idx = self.example_selector.currentIndex()
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        example_dir = os.path.join(base_dir, "photoexample")
+        if not os.path.exists(example_dir): return
+        
+        images = sorted([f for f in os.listdir(example_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))])
+        if idx < len(images):
+            self.load_image(os.path.join(example_dir, images[idx]))
 
-    def check_input_limit(self):
-        if not self.selected_file or not hasattr(self, 'current_cap'): return
-        text = self.msg_input.toPlainText()
-        used_bits = len(text.encode('utf-8')) * 8
-        total_bits = self.current_cap['total_bits']
-        percent = (used_bits / total_bits) * 100 if total_bits > 0 else 0
-        self.limit_label.setText(f"ใช้ไป: {used_bits:,} / {total_bits:,} bits ({percent:.1f}%)")
-        self.hide_btn.setEnabled(used_bits <= total_bits)
+    def update_capacity(self):
+        if not self.selected_image: return
+        
+        mode = self.mode_selector.currentIndex()
+        if mode == 0: self.capacity = get_image_capacity_lsb(self.selected_image)
+        elif mode == 1: self.capacity = get_image_capacity_alpha(self.selected_image)
+        elif mode == 2: self.capacity = get_image_capacity_edge(self.selected_image)
+        
+        msg_len = len(self.message_input.toPlainText().encode('utf-8')) * 8
+        self.capacity_label.setText(f"📊 ความจุ: {self.capacity:,} บิต | ใช้ไป: {msg_len:,} บิต")
+        
+        if msg_len > self.capacity:
+            self.capacity_label.setStyleSheet("color: #ff4444; font-weight: bold;")
+        else:
+            self.capacity_label.setStyleSheet("color: #00ff88;")
 
     def process_hide(self):
-        if not self.selected_file: return
-        method = self.method_combo.currentText()
-        filename = f"stego_{method.split(' ')[0].lower()}_{os.path.basename(self.selected_file)}"
-        if not filename.lower().endswith(".png"): filename = os.path.splitext(filename)[0] + ".png"
-        self.output_file = PathManager.get_output_path("image", filename)
+        if not self.selected_image: return
+        msg = self.message_input.toPlainText()
+        if not msg: return
         
-        func = None
-        if "LSB" in method: func = SteganoEngine.hide_image_lsb
-        elif "EOF" in method: func = SteganoEngine.hide_eof
-        elif "Metadata" in method: func = SteganoEngine.hide_metadata
-        elif "Alpha" in method: func = SteganoEngine.hide_alpha
-        elif "Edge" in method: func = SteganoEngine.hide_edge
-        elif "Masking" in method: func = SteganoEngine.hide_masking
-        elif "Palette" in method: func = SteganoEngine.hide_palette
+        mode = self.mode_selector.currentIndex()
+        output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "photoexample", "output")
+        os.makedirs(output_dir, exist_ok=True)
         
-        self.run_worker(func, self.selected_file, self.msg_input.toPlainText().encode('utf-8'), self.output_file)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        ext = ".png" # บันทึกเป็น PNG เสมอเพื่อความปลอดภัยของข้อมูล
+        output_path = os.path.join(output_dir, f"hidden_{timestamp}{ext}")
+        
+        try:
+            self.progress_bar.setValue(30)
+            if mode == 0: hide_lsb_image(self.selected_image, msg, output_path)
+            elif mode == 1: hide_alpha_channel(self.selected_image, msg, output_path)
+            elif mode == 2: hide_edge_detection(self.selected_image, msg, output_path)
+            
+            self.progress_bar.setValue(100)
+            self.result_output.setPlainText(f"✅ ซ่อนข้อมูลสำเร็จ!\nบันทึกที่: {output_path}")
+        except Exception as e:
+            self.result_output.setPlainText(f"❌ เกิดข้อผิดพลาด: {str(e)}")
+            self.progress_bar.setValue(0)
 
     def process_extract(self):
-        if not self.selected_file: return
-        method = self.method_combo.currentText()
-        func = None
-        if "LSB" in method: func = SteganoEngine.extract_image_lsb
-        elif "EOF" in method: func = SteganoEngine.extract_eof
-        elif "Metadata" in method: func = SteganoEngine.extract_metadata
-        elif "Alpha" in method: func = SteganoEngine.extract_alpha
-        elif "Edge" in method: func = SteganoEngine.extract_edge
-        elif "Masking" in method: func = SteganoEngine.extract_masking
-        elif "Palette" in method: func = SteganoEngine.extract_palette
-        self.run_worker(func, self.selected_file)
-
-    def run_worker(self, func, *args):
-        self.worker = WorkerThread(func, *args)
-        self.worker.progress.connect(self.progress_bar.setValue)
-        self.worker.finished.connect(self.on_finished)
-        self.worker.start()
-
-    def on_finished(self, msg):
-        self.log_output.append(msg)
-        if "สำเร็จ" in msg:
-            self.open_folder_btn.setEnabled(True)
-            # If it was an extraction, the result might be bytes
-            if "extract" in self.worker.func.__name__.lower():
-                try:
-                    # The msg is "✅ สำเร็จ: <result>"
-                    result_part = msg.split("สำเร็จ: ")[1]
-                    # If it's a string representation of bytes, we might need to handle it
-                    # But WorkerThread returns result as string in finished.emit(f"✅ สำเร็จ: {result}")
-                    # So we should probably change WorkerThread to emit the raw result or handle it here
-                    pass 
-                except:
-                    pass
+        if not self.selected_image: return
+        mode = self.mode_selector.currentIndex()
+        
+        try:
+            self.progress_bar.setValue(50)
+            res = ""
+            if mode == 0: res = extract_lsb_image(self.selected_image)
+            elif mode == 1: res = extract_alpha_channel(self.selected_image)
+            elif mode == 2: res = extract_edge_detection(self.selected_image)
+            
+            self.progress_bar.setValue(100)
+            self.result_output.setPlainText(f"🔓 ข้อความที่พบ:\n{res}")
+        except Exception as e:
+            self.result_output.setPlainText(f"❌ เกิดข้อผิดพลาด: {str(e)}")
+            self.progress_bar.setValue(0)
 
     def open_output_folder(self):
-        path = PathManager.get_category_dir("image")
-        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+        output_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "photoexample", "output")
+        os.makedirs(output_path, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(output_path))
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls(): event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        urls = event.mimeData().urls()
+        if urls:
+            path = urls[0].toLocalFile()
+            if path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
+                self.load_image(path)

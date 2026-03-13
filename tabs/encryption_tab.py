@@ -1,12 +1,15 @@
 import os
 import base64
+import random
+import string
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QGroupBox, QLineEdit, QPushButton, QLabel,
-    QTextEdit, QHBoxLayout, QScrollArea, QFrame, QMessageBox
+    QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, 
+    QPushButton, QComboBox, QTextEdit, QLineEdit, QFrame, 
+    QFileDialog, QMessageBox, QScrollArea
 )
 from PyQt5.QtCore import Qt
-from utils.crypto_engine import CryptoEngine
-from utils.logger import logger
+
+from utils.encryption import CryptoUtils
 
 class EncryptionTab(QWidget):
     def __init__(self):
@@ -15,78 +18,139 @@ class EncryptionTab(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(20)
-        
-        # AES Section
-        aes_group = QGroupBox("🔐 AES-256 Symmetric Encryption")
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # --- ส่วน AES Encryption ---
+        aes_group = QGroupBox("🔐 การเข้ารหัส AES-256 (Symmetric)")
         aes_layout = QVBoxLayout()
         
-        info = QLabel("เข้ารหัสข้อมูลด้วยอัลกอริทึม AES-256 บิต โดยใช้รหัสผ่าน (Passphrase)")
-        info.setStyleSheet("color: #888; font-style: italic;")
-        aes_layout.addWidget(info)
+        aes_layout.addWidget(QLabel("📝 ข้อความที่ต้องการเข้ารหัส/ถอดรหัส:"))
+        self.aes_input = QTextEdit()
+        self.aes_input.setPlaceholderText("ใส่ข้อความที่นี่...")
+        aes_layout.addWidget(self.aes_input)
         
-        self.input_text = QTextEdit()
-        self.input_text.setPlaceholderText("ใส่ข้อความที่ต้องการเข้ารหัส/ถอดรหัสที่นี่...")
+        key_layout = QHBoxLayout()
+        key_layout.addWidget(QLabel("🔑 กุญแจ (Key):"))
+        self.aes_key = QLineEdit()
+        self.aes_key.setPlaceholderText("ใส่กุญแจ 16, 24 หรือ 32 ตัวอักษร")
+        key_layout.addWidget(self.aes_key)
         
-        pass_layout = QHBoxLayout()
-        self.passphrase_input = QLineEdit()
-        self.passphrase_input.setPlaceholderText("ใส่รหัสผ่าน (Passphrase)")
-        self.passphrase_input.setEchoMode(QLineEdit.Password)
-        pass_layout.addWidget(QLabel("รหัสผ่าน:"))
-        pass_layout.addWidget(self.passphrase_input)
+        self.gen_key_btn = QPushButton("🎲 สุ่มกุญแจ")
+        self.gen_key_btn.clicked.connect(self.generate_aes_key)
+        key_layout.addWidget(self.gen_key_btn)
+        aes_layout.addLayout(key_layout)
         
-        btn_layout = QHBoxLayout()
-        self.encrypt_btn = QPushButton("🔒 เข้ารหัส (Encrypt)")
-        self.encrypt_btn.setObjectName("primaryBtn")
-        self.encrypt_btn.clicked.connect(self.process_encrypt)
+        btns = QHBoxLayout()
+        self.aes_encrypt_btn = QPushButton("🔒 เข้ารหัส AES")
+        self.aes_encrypt_btn.setObjectName("primaryBtn")
+        self.aes_encrypt_btn.clicked.connect(self.aes_encrypt)
         
-        self.decrypt_btn = QPushButton("🔓 ถอดรหัส (Decrypt)")
-        self.decrypt_btn.setObjectName("secondaryBtn")
-        self.decrypt_btn.clicked.connect(self.process_decrypt)
+        self.aes_decrypt_btn = QPushButton("🔓 ถอดรหัส AES")
+        self.aes_decrypt_btn.setObjectName("secondaryBtn")
+        self.aes_decrypt_btn.clicked.connect(self.aes_decrypt)
         
-        btn_layout.addWidget(self.encrypt_btn)
-        btn_layout.addWidget(self.decrypt_btn)
+        btns.addWidget(self.aes_encrypt_btn)
+        btns.addWidget(self.aes_decrypt_btn)
+        aes_layout.addLayout(btns)
         
-        self.output_text = QTextEdit()
-        self.output_text.setReadOnly(True)
-        self.output_text.setPlaceholderText("ผลลัพธ์จะแสดงที่นี่...")
-        
-        aes_layout.addWidget(self.input_text)
-        aes_layout.addLayout(pass_layout)
-        aes_layout.addLayout(btn_layout)
-        aes_layout.addWidget(self.output_text)
         aes_group.setLayout(aes_layout)
         layout.addWidget(aes_group)
 
-    def process_encrypt(self):
-        data = self.input_text.toPlainText()
-        password = self.passphrase_input.text()
-        if not data or not password:
-            QMessageBox.warning(self, "Warning", "กรุณาใส่ข้อมูลและรหัสผ่าน")
-            return
+        # --- ส่วน RSA Encryption ---
+        rsa_group = QGroupBox("🔑 การเข้ารหัส RSA (Asymmetric)")
+        rsa_layout = QVBoxLayout()
         
-        try:
-            encrypted_bytes = CryptoEngine.aes_encrypt(data.encode('utf-8'), password)
-            encrypted_b64 = base64.b64encode(encrypted_bytes).decode('utf-8')
-            self.output_text.setPlainText(encrypted_b64)
-            logger.log("info", "AES Encryption successful.")
-        except Exception as e:
-            logger.log("error", f"Encryption error: {e}")
-            QMessageBox.critical(self, "Error", f"การเข้ารหัสล้มเหลว: {e}")
+        rsa_layout.addWidget(QLabel("📝 ข้อความสำหรับ RSA:"))
+        self.rsa_input = QTextEdit()
+        self.rsa_input.setPlaceholderText("ใส่ข้อความที่นี่...")
+        rsa_layout.addWidget(self.rsa_input)
+        
+        keys_layout = QHBoxLayout()
+        
+        pub_layout = QVBoxLayout()
+        pub_layout.addWidget(QLabel("📜 กุญแจสาธารณะ (Public Key):"))
+        self.pub_key_text = QTextEdit()
+        pub_layout.addWidget(self.pub_key_text)
+        keys_layout.addLayout(pub_layout)
+        
+        priv_layout = QVBoxLayout()
+        priv_layout.addWidget(QLabel("🔐 กุญแจส่วนตัว (Private Key):"))
+        self.priv_key_text = QTextEdit()
+        priv_layout.addWidget(self.priv_key_text)
+        keys_layout.addLayout(priv_layout)
+        
+        rsa_layout.addLayout(keys_layout)
+        
+        rsa_btns = QHBoxLayout()
+        self.gen_rsa_btn = QPushButton("✨ สร้างคู่กุญแจ RSA")
+        self.gen_rsa_btn.clicked.connect(self.generate_rsa_keys)
+        
+        self.rsa_encrypt_btn = QPushButton("🔒 เข้ารหัสด้วย Public Key")
+        self.rsa_encrypt_btn.setObjectName("primaryBtn")
+        self.rsa_encrypt_btn.clicked.connect(self.rsa_encrypt)
+        
+        self.rsa_decrypt_btn = QPushButton("🔓 ถอดรหัสด้วย Private Key")
+        self.rsa_decrypt_btn.setObjectName("secondaryBtn")
+        self.rsa_decrypt_btn.clicked.connect(self.rsa_decrypt)
+        
+        rsa_btns.addWidget(self.gen_rsa_btn)
+        rsa_btns.addWidget(self.rsa_encrypt_btn)
+        rsa_btns.addWidget(self.rsa_decrypt_btn)
+        rsa_layout.addLayout(rsa_btns)
+        
+        rsa_group.setLayout(rsa_layout)
+        layout.addWidget(rsa_group)
 
-    def process_decrypt(self):
-        data_b64 = self.input_text.toPlainText()
-        password = self.passphrase_input.text()
-        if not data_b64 or not password:
-            QMessageBox.warning(self, "Warning", "กรุณาใส่ข้อมูลและรหัสผ่าน")
-            return
-        
+        # --- ส่วนแสดงผลลัพธ์รวม ---
+        result_group = QGroupBox("📊 ผลลัพธ์ (Output)")
+        result_layout = QVBoxLayout()
+        self.result_output = QTextEdit()
+        self.result_output.setReadOnly(True)
+        result_layout.addWidget(self.result_output)
+        result_group.setLayout(result_layout)
+        layout.addWidget(result_group)
+
+    def generate_aes_key(self):
+        key = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+        self.aes_key.setText(key)
+
+    def aes_encrypt(self):
+        data = self.aes_input.toPlainText()
+        key = self.aes_key.text()
+        if not data or not key: return
+        res = CryptoUtils.aes_encrypt(data, key)
+        self.result_output.setPlainText(res)
+
+    def aes_decrypt(self):
+        data = self.aes_input.toPlainText()
+        key = self.aes_key.text()
+        if not data or not key: return
+        res = CryptoUtils.aes_decrypt(data, key)
+        self.result_output.setPlainText(res)
+
+    def generate_rsa_keys(self):
+        priv, pub = CryptoUtils.rsa_generate_keys()
+        self.priv_key_text.setPlainText(priv)
+        self.pub_key_text.setPlainText(pub)
+        self.result_output.setPlainText("✅ สร้างคู่กุญแจ RSA สำเร็จ!")
+
+    def rsa_encrypt(self):
+        data = self.rsa_input.toPlainText()
+        pub = self.pub_key_text.toPlainText()
+        if not data or not pub: return
         try:
-            encrypted_bytes = base64.b64decode(data_b64)
-            decrypted = CryptoEngine.aes_decrypt(encrypted_bytes, password)
-            self.output_text.setPlainText(decrypted.decode('utf-8'))
-            logger.log("info", "AES Decryption successful.")
+            res = CryptoUtils.rsa_encrypt(data, pub)
+            self.result_output.setPlainText(res)
         except Exception as e:
-            logger.log("error", f"Decryption error: {e}")
-            QMessageBox.critical(self, "Error", f"การถอดรหัสล้มเหลว: {e}")
+            self.result_output.setPlainText(f"❌ ข้อผิดพลาด: {str(e)}")
+
+    def rsa_decrypt(self):
+        data = self.rsa_input.toPlainText()
+        priv = self.priv_key_text.toPlainText()
+        if not data or not priv: return
+        try:
+            res = CryptoUtils.rsa_decrypt(data, priv)
+            self.result_output.setPlainText(res)
+        except Exception as e:
+            self.result_output.setPlainText(f"❌ ข้อผิดพลาด: {str(e)}")

@@ -1,5 +1,5 @@
 {
   "name": "SIENG - Secure Incognito ENcryption Guard",
-  "description": "Advanced Multi-Format Steganography & Encryption Suite (Python Desktop Application)",
+  "description": "ระบบซ่อนข้อมูลและเข้ารหัสลับขั้นสูง รองรับหลายรูปแบบไฟล์ (Advanced Steganography & Encryption Suite)",
   "requestFramePermissions": []
 }
