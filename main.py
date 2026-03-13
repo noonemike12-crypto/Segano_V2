@@ -1,24 +1,28 @@
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTabWidget, QLabel, QFrame, QHBoxLayout, QGraphicsDropShadowEffect
-from PyQt5.QtGui import QIcon, QColor
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTabWidget, QLabel, QFrame, QHBoxLayout
+from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 
 from utils.styles import get_modern_style
+from utils.logger import logger
 import tabs.image_tab as image_tab
 import tabs.audio_tab as audio_tab
 import tabs.video_tab as video_tab
 import tabs.encryption_tab as encryption_tab
 import tabs.pgp_tab as pgp_tab
 import tabs.integrated_mode_tab as integrated_mode_tab
+import tabs.debug_tab as debug_tab
 
 class SIENGApp(QWidget):
     def __init__(self):
         super().__init__()
+        logger.log("info", "Initializing SIENG PRO Application...")
         self.setWindowTitle("SIENG : Secure Incognito ENcryption Guard")
         self.setMinimumSize(1280, 850)
         self.setStyleSheet(get_modern_style())
         self.init_ui()
+        logger.log("info", "Application UI initialized successfully.")
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)
@@ -70,6 +74,7 @@ class SIENGApp(QWidget):
         self.tabs.addTab(encryption_tab.EncryptionTab(), "🔐 CRYPTO")
         self.tabs.addTab(pgp_tab.PGPTab(), "🔑 PGP")
         self.tabs.addTab(integrated_mode_tab.IntegrationTab(), "🔗 INTEGRATED")
+        self.tabs.addTab(debug_tab.DebugTab(), "🛠️ DEBUG")
         
         content_layout.addWidget(self.tabs)
         main_layout.addWidget(content_frame)
@@ -90,12 +95,6 @@ class SIENGApp(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    
-    # Set app-wide font
-    font = app.font()
-    font.setFamily("Segoe UI")
-    app.setFont(font)
-    
     window = SIENGApp()
     window.show()
     sys.exit(app.exec_())
