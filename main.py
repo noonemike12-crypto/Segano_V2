@@ -26,6 +26,12 @@ class SIENGApp(QWidget):
         super().__init__()
         self.setWindowTitle("SIENG PRO : Secure Incognito ENcryption Guard")
         self.setMinimumSize(1200, 850)
+        
+        # Set Window Icon
+        logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
+        if os.path.exists(logo_path):
+            self.setWindowIcon(QIcon(logo_path))
+            
         self.setStyleSheet(get_modern_style())
         self.init_ui()
         
@@ -46,6 +52,15 @@ class SIENGApp(QWidget):
         header.setStyleSheet("background-color: #0f172a; border-bottom: 2px solid #1e293b;")
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(30, 0, 30, 0)
+        
+        # Logo in Header
+        logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
+        if os.path.exists(logo_path):
+            logo_label = QLabel()
+            logo_pix = QPixmap(logo_path).scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            logo_label.setPixmap(logo_pix)
+            header_layout.addWidget(logo_label)
+            header_layout.addSpacing(15)
         
         title_vbox = QVBoxLayout()
         title = QLabel("SIENG PRO")
@@ -124,16 +139,36 @@ class SIENGApp(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     
+    # Path to logo
+    logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
+    
     # แสดงหน้าจอโหลด (Splash Screen)
-    splash_pix = QPixmap(600, 300)
+    splash_pix = QPixmap(600, 400)
     splash_pix.fill(Qt.transparent)
     painter = QPainter(splash_pix)
     painter.setRenderHint(QPainter.Antialiasing)
+    
+    # Background
     painter.setBrush(Qt.black)
-    painter.drawRoundedRect(0, 0, 600, 300, 20, 20)
-    painter.setPen(Qt.white)
-    painter.setFont(QFont("Arial", 30, QFont.Bold))
-    painter.drawText(splash_pix.rect(), Qt.AlignCenter, "SIENG PRO\nLoading...")
+    painter.setPen(Qt.NoPen)
+    painter.drawRoundedRect(0, 0, 600, 400, 30, 30)
+    
+    if os.path.exists(logo_path):
+        # Draw Logo
+        logo_img = QPixmap(logo_path).scaled(300, 300, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        x = (600 - logo_img.width()) // 2
+        y = (400 - logo_img.height()) // 2 - 20
+        painter.drawPixmap(x, y, logo_img)
+        
+        # Text under logo
+        painter.setPen(Qt.white)
+        painter.setFont(QFont("Arial", 14))
+        painter.drawText(splash_pix.rect().adjusted(0, 0, 0, -30), Qt.AlignBottom | Qt.AlignHCenter, "SECURE INCOGNITO ENCRYPTION GUARD")
+    else:
+        painter.setPen(Qt.white)
+        painter.setFont(QFont("Arial", 30, QFont.Bold))
+        painter.drawText(splash_pix.rect(), Qt.AlignCenter, "SIENG PRO\nLoading...")
+        
     painter.end()
     
     splash = QSplashScreen(splash_pix)
