@@ -139,3 +139,61 @@ def extract_edge_detection(image_path):
         if len(binary_message) >= 8 and binary_message[-8:] == '00000000':
             return binary_to_string(binary_message[:-8])
     return "ไม่พบข้อมูลที่ซ่อนอยู่"
+
+# --- Video Steganography Logic ---
+
+def hide_lsb_video(video_path, message, output_path):
+    """ซ่อนข้อมูลแบบ LSB ในเฟรมแรกของวิดีโอ (Simple implementation)"""
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise ValueError("ไม่สามารถเปิดไฟล์วิดีโอได้")
+        
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fourcc = cv2.VideoWriter_fourcc(*'FFV1') # ใช้ Lossless codec เพื่อรักษาข้อมูล LSB
+    
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    
+    binary_message = string_to_binary(message) + '00000000'
+    ret, frame = cap.read()
+    
+    if ret:
+        flat_frame = frame.flatten()
+        if len(binary_message) > len(flat_frame):
+            cap.release()
+            out.release()
+            raise ValueError("ข้อความยาวเกินความจุของเฟรมวิดีโอ")
+            
+        for i in range(len(binary_message)):
+            flat_frame[i] = (flat_frame[i] & 254) | int(binary_message[i])
+            
+        frame = flat_frame.reshape(frame.shape)
+        out.write(frame)
+        
+        while True:
+            ret, frame = cap.read()
+            if not ret: break
+            out.write(frame)
+            
+    cap.release()
+    out.release()
+    return True
+
+def extract_lsb_video(video_path):
+    """ดึงข้อมูลจากเฟรมแรกของวิดีโอ"""
+    cap = cv2.VideoCapture(video_path)
+    ret, frame = cap.read()
+    cap.release()
+    
+    if not ret:
+        return "ไม่สามารถอ่านวิดีโอได้"
+        
+    flat_frame = frame.flatten()
+    binary_message = ""
+    for val in flat_frame:
+        binary_message += str(val & 1)
+        if len(binary_message) >= 8 and binary_message[-8:] == '00000000':
+            return binary_to_string(binary_message[:-8])
+            
+    return "ไม่พบข้อมูลที่ซ่อนอยู่"

@@ -1,6 +1,45 @@
 import sys
 import os
 import psutil
+import subprocess
+
+# --- Automatic Setup Section ---
+def auto_setup():
+    """สร้างโฟลเดอร์ที่จำเป็นโดยอัตโนมัติและตรวจสอบการติดตั้งไลบรารี"""
+    directories = [
+        "assets", "logs", "audioexample", "audioexample/output",
+        "vdio", "vdio/output", "photoexample", "photoexample/output",
+        "output_files"
+    ]
+    for d in directories:
+        if not os.path.exists(d):
+            try:
+                os.makedirs(d)
+                print(f"Created directory: {d}")
+            except Exception as e:
+                print(f"Error creating directory {d}: {e}")
+
+    # ตรวจสอบไลบรารีที่จำเป็น
+    missing = []
+    try: import PyQt5
+    except ImportError: missing.append("PyQt5")
+    try: import cv2
+    except ImportError: missing.append("opencv-python")
+    try: import Crypto
+    except ImportError: missing.append("pycryptodome")
+    try: import gnupg
+    except ImportError: missing.append("python-gnupg")
+    
+    if missing:
+        print(f"Missing libraries: {', '.join(missing)}")
+        # เรายังไม่สามารถแสดง QMessageBox ได้ที่นี่เพราะยังไม่ได้สร้าง QApplication
+        # แต่จะเก็บไว้แจ้งเตือนหลังจากสร้างแอปแล้ว
+        return missing
+    return []
+
+# รัน setup ก่อนเริ่มแอป
+missing_libs = auto_setup()
+
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
     QTabWidget, QLabel, QFrame, QPushButton, QSystemTrayIcon, 
@@ -27,9 +66,14 @@ class SIENGApp(QWidget):
         self.setWindowTitle("SIENG PRO : Secure Incognito ENcryption Guard")
         self.setMinimumSize(1200, 850)
         
-        # Set Window Icon
-        logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
-        if os.path.exists(logo_path):
+        # Set Window Icon (Support both .png and .ico)
+        assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+        icon_path = os.path.join(assets_dir, "myicon.ico")
+        logo_path = os.path.join(assets_dir, "logo.png")
+        
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        elif os.path.exists(logo_path):
             self.setWindowIcon(QIcon(logo_path))
             
         self.setStyleSheet(get_modern_style())
@@ -139,8 +183,14 @@ class SIENGApp(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     
-    # Path to logo
-    logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
+    if missing_libs:
+        QMessageBox.critical(None, "ข้อผิดพลาด", f"ไม่พบไลบรารีที่จำเป็น: {', '.join(missing_libs)}\nกรุณารัน 'pip install -r requirements.txt'")
+        sys.exit(1)
+    
+    # Path to logo/icon
+    assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+    logo_path = os.path.join(assets_dir, "logo.png")
+    icon_path = os.path.join(assets_dir, "myicon.ico")
     
     # แสดงหน้าจอโหลด (Splash Screen)
     splash_pix = QPixmap(600, 400)
@@ -153,9 +203,11 @@ if __name__ == "__main__":
     painter.setPen(Qt.NoPen)
     painter.drawRoundedRect(0, 0, 600, 400, 30, 30)
     
-    if os.path.exists(logo_path):
-        # Draw Logo
-        logo_img = QPixmap(logo_path).scaled(300, 300, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    display_path = logo_path if os.path.exists(logo_path) else icon_path
+    
+    if os.path.exists(display_path):
+        # Draw Logo/Icon
+        logo_img = QPixmap(display_path).scaled(300, 300, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         x = (600 - logo_img.width()) // 2
         y = (400 - logo_img.height()) // 2 - 20
         painter.drawPixmap(x, y, logo_img)

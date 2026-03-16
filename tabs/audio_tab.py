@@ -168,16 +168,26 @@ class AudioTab(QWidget):
             
             with wave.open(use_path, 'rb') as f:
                 params = f.getparams()
-                frames = f.readframes(f.getnframes())
+                n_frames = f.getnframes()
+                frames = f.readframes(n_frames)
             
-            audio_data = np.frombuffer(frames, dtype=np.uint8).copy()
+            # ตรวจสอบขนาดตัวอย่าง (Sample Width)
+            sample_width = params.sampwidth
+            if sample_width == 1:
+                audio_data = np.frombuffer(frames, dtype=np.uint8).copy()
+            elif sample_width == 2:
+                audio_data = np.frombuffer(frames, dtype=np.int16).copy()
+            else:
+                raise ValueError("รองรับเฉพาะไฟล์เสียง 8-bit หรือ 16-bit เท่านั้น")
+
             bin_msg = string_to_binary(msg) + '00000000'
             
             if len(bin_msg) > len(audio_data):
                 raise ValueError("ข้อความยาวเกินความจุของไฟล์เสียง")
             
             for i in range(len(bin_msg)):
-                audio_data[i] = (audio_data[i] & 254) | int(bin_msg[i])
+                # ซ่อนในบิตสุดท้าย (LSB)
+                audio_data[i] = (audio_data[i] & ~1) | int(bin_msg[i])
             
             output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "audioexample", "output")
             os.makedirs(output_dir, exist_ok=True)
@@ -202,9 +212,17 @@ class AudioTab(QWidget):
                 audio.export(use_path, format="wav")
             
             with wave.open(use_path, 'rb') as f:
+                params = f.getparams()
                 frames = f.readframes(f.getnframes())
             
-            audio_data = np.frombuffer(frames, dtype=np.uint8)
+            sample_width = params.sampwidth
+            if sample_width == 1:
+                audio_data = np.frombuffer(frames, dtype=np.uint8)
+            elif sample_width == 2:
+                audio_data = np.frombuffer(frames, dtype=np.int16)
+            else:
+                raise ValueError("รองรับเฉพาะไฟล์เสียง 8-bit หรือ 16-bit เท่านั้น")
+
             bin_msg = ""
             for b in audio_data:
                 bin_msg += str(b & 1)

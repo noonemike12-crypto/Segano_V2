@@ -150,18 +150,26 @@ class IntegrationTab(QWidget):
                     raise ValueError("โหมดนี้ต้องการอย่างน้อย 2 ไฟล์ (ภาพ และ เสียง)")
                 
                 self.log_output.append("🔐 เข้ารหัส AES...")
-                key = "sieng_secret_key_32_chars_long!!!" # ในระบบจริงควรให้ผู้ใช้กรอกหรือสุ่ม
+                key = "sieng_secret_key_32_chars_long!!!" 
                 encrypted = CryptoUtils.aes_encrypt(text, key)
                 
                 half = len(encrypted) // 2
                 p1, p2 = encrypted[:half], encrypted[half:]
                 
                 self.log_output.append("🖼️ ซ่อนส่วนที่ 1 ในภาพ...")
-                hide_lsb_image(self.selected_files[0], p1, "output_mode1_img.png")
+                out_img = os.path.join("photoexample", "output", "mode1_part1.png")
+                os.makedirs(os.path.dirname(out_img), exist_ok=True)
+                hide_lsb_image(self.selected_files[0], p1, out_img)
                 
                 self.log_output.append("🎵 ซ่อนส่วนที่ 2 ในเสียง...")
-                # สมมติว่ามีฟังก์ชัน hide_lsb_audio ใน utils
-                self.log_output.append("✅ สำเร็จ! บันทึกไฟล์ในโฟลเดอร์ผลลัพธ์")
+                # ใช้ logic ซ่อนในไฟล์เสียงแบบง่าย (EOF Append สำหรับโหมดรวมเพื่อความรวดเร็วและรองรับหลายฟอร์แมต)
+                out_audio = os.path.join("audioexample", "output", "mode1_part2" + os.path.splitext(self.selected_files[1])[1])
+                os.makedirs(os.path.dirname(out_audio), exist_ok=True)
+                with open(self.selected_files[1], 'rb') as f_in, open(out_audio, 'wb') as f_out:
+                    f_out.write(f_in.read())
+                    f_out.write(b"SIENG_START" + p2.encode('utf-8') + b"SIENG_END")
+                
+                self.log_output.append(f"✅ สำเร็จ!\n- ส่วนที่ 1: {out_img}\n- ส่วนที่ 2: {out_audio}")
 
             elif mode == 1: # โหมด 2: DOCX + RSA + Video Metadata
                 self.log_output.append("📄 สร้างไฟล์ DOCX...")
@@ -169,11 +177,34 @@ class IntegrationTab(QWidget):
                 self.log_output.append("⚠️ โหมดนี้ต้องการไลบรารี python-docx และ msoffcrypto")
                 self.log_output.append("✅ สำเร็จ (จำลอง)")
 
-            elif mode == 2: # โหมด 3: AES + แบ่ง 3 ส่วน
+            elif mode == 2: # โหมด 3: AES + แบ่ง 3 ส่วน (ภาพ + เสียง + วิดีโอ)
                 if len(self.selected_files) < 3:
                     raise ValueError("โหมดนี้ต้องการอย่างน้อย 3 ไฟล์ (ภาพ, เสียง, วิดีโอ)")
-                self.log_output.append("🔐 เข้ารหัสและแบ่ง 3 ส่วน...")
-                self.log_output.append("✅ สำเร็จ (จำลอง)")
+                
+                self.log_output.append("🔐 เข้ารหัส AES...")
+                key = "sieng_secret_key_32_chars_long!!!"
+                encrypted = CryptoUtils.aes_encrypt(text, key)
+                
+                third = len(encrypted) // 3
+                p1, p2, p3 = encrypted[:third], encrypted[third:2*third], encrypted[2*third:]
+                
+                self.log_output.append("🖼️ ซ่อนส่วนที่ 1 ในภาพ...")
+                out_img = os.path.join("photoexample", "output", "mode3_part1.png")
+                hide_lsb_image(self.selected_files[0], p1, out_img)
+                
+                self.log_output.append("🎵 ซ่อนส่วนที่ 2 ในเสียง...")
+                out_audio = os.path.join("audioexample", "output", "mode3_part2" + os.path.splitext(self.selected_files[1])[1])
+                with open(self.selected_files[1], 'rb') as f_in, open(out_audio, 'wb') as f_out:
+                    f_out.write(f_in.read())
+                    f_out.write(b"SIENG_START" + p2.encode('utf-8') + b"SIENG_END")
+                
+                self.log_output.append("🎬 ซ่อนส่วนที่ 3 ในวิดีโอ (EOF)...")
+                out_video = os.path.join("vdio", "output", "mode3_part3" + os.path.splitext(self.selected_files[2])[1])
+                with open(self.selected_files[2], 'rb') as f_in, open(out_video, 'wb') as f_out:
+                    f_out.write(f_in.read())
+                    f_out.write(b"SIENG_START" + p3.encode('utf-8') + b"SIENG_END")
+                
+                self.log_output.append(f"✅ สำเร็จ!\n- ส่วนที่ 1: {out_img}\n- ส่วนที่ 2: {out_audio}\n- ส่วนที่ 3: {out_video}")
 
             else:
                 self.log_output.append("⚠️ โหมดอื่นๆ กำลังอยู่ในการพัฒนา")

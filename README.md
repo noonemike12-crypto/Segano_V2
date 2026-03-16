@@ -1,20 +1,37 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# SIENG PRO - ระบบซ่อนข้อมูลและเข้ารหัสลับขั้นสูง
 
-# Run and deploy your AI Studio app
+**SIENG PRO (Secure Incognito ENcryption Guard)** เป็นเครื่องมือสำหรับซ่อนข้อมูลลับ (Steganography) และเข้ารหัสข้อมูล (Encryption) ที่รองรับไฟล์หลายรูปแบบ ทั้งรูปภาพ, เสียง, วิดีโอ และไฟล์ทั่วไป
 
-This contains everything you need to run your app locally.
+## ✨ คุณสมบัติหลัก
+- **🖼️ รูปภาพ (Image):** ซ่อนข้อความแบบ LSB, Alpha Channel และ Edge Detection
+- **🎵 เสียง (Audio):** ซ่อนข้อความในไฟล์ WAV (LSB) พร้อมระบบเล่นเสียงในตัว
+- **🎬 วิดีโอ (Video):** ซ่อนข้อความในเฟรมวิดีโอ (Lossless AVI)
+- **🏷️ Metadata:** จัดการข้อมูล EXIF และ Metadata ของไฟล์สื่อ
+- **📁 ซ่อนไฟล์ (File-in-File):** ซ่อนไฟล์ใดๆ ไว้หลังไฟล์รูปภาพหรือวิดีโอ (EOF Append)
+- **🔐 เข้ารหัส (Encryption):** รองรับ AES-256, RSA, Blowfish และ Fernet
+- **🔑 PGP:** ระบบจัดการกุญแจ PGP, เข้ารหัส/ถอดรหัส และลงลายเซ็นดิจิทัล
+- **🔗 โหมดรวม (Integrated):** โหมดการทำงานร่วมกันหลายชั้นเพื่อความปลอดภัยสูงสุด
 
-View your app in AI Studio: https://ai.studio/apps/33fa5879-974f-4fc3-9651-7d8247f5d425
+## 🚀 วิธีเริ่มใช้งาน
+1. ติดตั้ง Python 3.10 ขึ้นไป
+2. ติดตั้งไลบรารีที่จำเป็น:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. ติดตั้ง **FFmpeg** ในเครื่อง (จำเป็นสำหรับโหมดวิดีโอและ Metadata)
+4. รันโปรแกรม:
+   ```bash
+   python main.py
+   ```
 
-## Run Locally
+## 📁 โครงสร้างโฟลเดอร์
+- `assets/`: เก็บไอคอนและโลโก้ (`logo.png`, `myicon.ico`)
+- `tabs/`: โค้ดส่วนหน้าจอของแต่ละแท็บ
+- `utils/`: โค้ดส่วนตรรกะการประมวลผล (Steganography, Crypto)
+- `audioexample/`: โฟลเดอร์สำหรับไฟล์เสียงตัวอย่างและผลลัพธ์
+- `vdio/`: โฟลเดอร์สำหรับไฟล์วิดีโอตัวอย่างและผลลัพธ์
+- `output_files/`: โฟลเดอร์สำหรับไฟล์ที่ซ่อนแบบ EOF
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## ⚠️ ข้อควรระวัง
+- การซ่อนข้อมูลในวิดีโอจะใช้ฟอร์แมต **AVI (Lossless)** เพื่อป้องกันข้อมูลสูญหายจากการบีบอัด
+- ตรวจสอบให้แน่ใจว่าได้ติดตั้ง **GnuPG** หากต้องการใช้งานแท็บ PGP

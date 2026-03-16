@@ -12,7 +12,7 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtCore import Qt, QUrl, QThread, pyqtSignal
 from PyQt5.QtGui import QDesktopServices
 
-from utils.steganography import string_to_binary, binary_to_string
+from utils.steganography import string_to_binary, binary_to_string, hide_lsb_video, extract_lsb_video
 
 class VideoTab(QWidget):
     def __init__(self):
@@ -135,23 +135,27 @@ class VideoTab(QWidget):
         if not msg: return
         
         self.log_output.append("🔄 กำลังประมวลผลวิดีโอ (อาจใช้เวลาสักครู่)...")
-        # ในที่นี้จะใช้เทคนิคซ่อนในเฟรมสุดท้ายแบบง่ายๆ (ตามโค้ดเดิมของผู้ใช้)
         try:
             output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "vdio", "output")
             os.makedirs(output_dir, exist_ok=True)
             output_path = os.path.join(output_dir, f"hidden_{os.path.basename(self.selected_video)}.avi")
             
-            # จำลองการทำงาน (เนื่องจาก OpenCV/FFmpeg อาจใช้เวลานาน)
-            # ในระบบจริงควรใช้ QThread
-            self.log_output.append(f"✅ ซ่อนสำเร็จ (จำลอง): {output_path}")
+            # ดำเนินการจริง
+            hide_lsb_video(self.selected_video, msg, output_path)
+            
+            self.log_output.append(f"✅ ซ่อนสำเร็จ: {output_path}")
+            self.log_output.append("⚠️ หมายเหตุ: ไฟล์ผลลัพธ์จะเป็น .avi (Lossless) เพื่อรักษาข้อมูล")
         except Exception as e:
             self.log_output.append(f"❌ เกิดข้อผิดพลาด: {str(e)}")
 
     def process_extract(self):
         if not self.selected_video: return
         self.log_output.append("🔍 กำลังค้นหาข้อมูลที่ซ่อนอยู่...")
-        # จำลองการถอดรหัส
-        self.log_output.append("🔓 ไม่พบข้อมูลที่ซ่อนอยู่ (โหมดวิดีโอต้องการการประมวลผลเฟรมที่แม่นยำ)")
+        try:
+            res = extract_lsb_video(self.selected_video)
+            self.log_output.append(f"🔓 ข้อความที่พบ: {res}")
+        except Exception as e:
+            self.log_output.append(f"❌ เกิดข้อผิดพลาด: {str(e)}")
 
     def open_output_folder(self):
         path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "vdio", "output")
