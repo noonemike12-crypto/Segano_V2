@@ -27,10 +27,16 @@ class SiengLogger:
         fh.setLevel(logging.DEBUG)
 
         # Formatter
-        formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(module)s:%(funcName)s:%(lineno)d | %(message)s')
+        formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
         fh.setFormatter(formatter)
 
+        # Console Handler
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+        ch.setFormatter(formatter)
+
         self.logger.addHandler(fh)
+        self.logger.addHandler(ch)
 
     def log(self, level, message):
         timestamp = datetime.now().strftime('%H:%M:%S')

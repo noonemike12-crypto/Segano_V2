@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 import ffmpeg
+from utils.logger import logger
 
 class FileInfoTab(QWidget):
     def __init__(self):
@@ -91,6 +92,7 @@ class FileInfoTab(QWidget):
         layout.addLayout(info_layout)
 
     def load_file(self, path):
+        logger.log("info", f"FileInfoTab: โหลดไฟล์จาก {path}")
         self.selected_file = path
         self.path_label.setText(f"ไฟล์ที่เลือก: {os.path.basename(path)}")
         self.show_details()
@@ -126,6 +128,7 @@ class FileInfoTab(QWidget):
         field = self.field_selector.currentText()
         val = self.meta_input.text()
         if not val: return
+        logger.log("info", f"FileInfoTab: เริ่มซ่อน Metadata (ฟิลด์: {field})")
         
         try:
             output_path = os.path.join(os.path.dirname(self.selected_file), f"meta_{os.path.basename(self.selected_file)}")
@@ -144,6 +147,7 @@ class FileInfoTab(QWidget):
 
     def process_extract(self):
         if not self.selected_file: return
+        logger.log("info", "FileInfoTab: เริ่มดึง Metadata")
         self.extracted_list.clear()
         try:
             probe = ffmpeg.probe(self.selected_file)

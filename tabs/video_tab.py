@@ -13,6 +13,7 @@ from PyQt5.QtCore import Qt, QUrl, QThread, pyqtSignal
 from PyQt5.QtGui import QDesktopServices
 
 from utils.steganography import string_to_binary, binary_to_string, hide_lsb_video, extract_lsb_video
+from utils.logger import logger
 
 class VideoTab(QWidget):
     def __init__(self):
@@ -108,6 +109,7 @@ class VideoTab(QWidget):
             self.example_selector.addItems(files)
 
     def load_video(self, path):
+        logger.log("info", f"VideoTab: โหลดวิดีโอจาก {path}")
         self.selected_video = path
         self.path_label.setText(f"ไฟล์ที่เลือก: {os.path.basename(path)}")
         self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(path)))
@@ -133,6 +135,7 @@ class VideoTab(QWidget):
         if not self.selected_video: return
         msg = self.message_input.toPlainText()
         if not msg: return
+        logger.log("info", "VideoTab: เริ่มกระบวนการซ่อนข้อความในวิดีโอ")
         
         self.log_output.append("🔄 กำลังประมวลผลวิดีโอ (อาจใช้เวลาสักครู่)...")
         try:
@@ -150,6 +153,7 @@ class VideoTab(QWidget):
 
     def process_extract(self):
         if not self.selected_video: return
+        logger.log("info", "VideoTab: เริ่มกระบวนการถอดข้อความจากวิดีโอ")
         self.log_output.append("🔍 กำลังค้นหาข้อมูลที่ซ่อนอยู่...")
         try:
             res = extract_lsb_video(self.selected_video)

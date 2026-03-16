@@ -13,6 +13,7 @@ from pydub import AudioSegment
 
 from utils.steganography import string_to_binary, binary_to_string
 from utils.check_bit import get_audio_capacity_lsb
+from utils.logger import logger
 
 class AudioTab(QWidget):
     def __init__(self):
@@ -115,6 +116,7 @@ class AudioTab(QWidget):
             self.example_selector.addItems(files)
 
     def load_audio(self, path):
+        logger.log("info", f"AudioTab: โหลดไฟล์เสียงจาก {path}")
         self.selected_audio = path
         self.path_label.setText(f"ไฟล์ที่เลือก: {os.path.basename(path)}")
         self.update_capacity()
@@ -155,6 +157,7 @@ class AudioTab(QWidget):
         if not self.selected_audio: return
         msg = self.message_input.toPlainText()
         if not msg: return
+        logger.log("info", "AudioTab: เริ่มกระบวนการซ่อนข้อความในไฟล์เสียง")
         
         try:
             # แปลงเป็น WAV ชั่วคราวถ้าไม่ใช่ WAV
@@ -204,6 +207,7 @@ class AudioTab(QWidget):
 
     def process_extract(self):
         if not self.selected_audio: return
+        logger.log("info", "AudioTab: เริ่มกระบวนการถอดข้อความจากไฟล์เสียง")
         try:
             use_path = self.selected_audio
             if not self.selected_audio.lower().endswith('.wav'):

@@ -18,6 +18,7 @@ from utils.steganography import (
 from utils.check_bit import (
     get_image_capacity_lsb, get_image_capacity_alpha, get_image_capacity_edge
 )
+from utils.logger import logger
 
 class ImageTab(QWidget):
     def __init__(self):
@@ -38,7 +39,8 @@ class ImageTab(QWidget):
         
         config_layout.addWidget(QLabel("📁 เลือกภาพตัวอย่าง:"), 0, 0)
         self.example_selector = QComboBox()
-        self.example_selector.addItems([f"ตัวอย่าง {i+1}" for i in range(10)])
+        self.example_selector.setPlaceholderText("เลือกภาพตัวอย่าง...")
+        self.load_example_list()
         self.example_selector.currentIndexChanged.connect(self.load_example_image)
         config_layout.addWidget(self.example_selector, 0, 1)
         
@@ -64,10 +66,16 @@ class ImageTab(QWidget):
         preview_layout = QVBoxLayout(preview_frame)
         
         preview_layout.addWidget(QLabel("🖼️ ตัวอย่างภาพ:"))
-        self.image_preview = QLabel("ลากภาพมาวางที่นี่\nหรือกดปุ่มเลือกไฟล์")
+        self.image_preview = QLabel("🖼️ ลากภาพมาวางที่นี่\nหรือกดปุ่มเลือกไฟล์")
         self.image_preview.setAlignment(Qt.AlignCenter)
         self.image_preview.setFixedSize(400, 300)
-        self.image_preview.setStyleSheet("border: 2px dashed #4a5568; border-radius: 10px; color: #718096;")
+        self.image_preview.setStyleSheet("""
+            border: 2px dashed #4a5568;
+            border-radius: 15px;
+            color: #718096;
+            font-size: 14pt;
+            background-color: #1a202c;
+        """)
         preview_layout.addWidget(self.image_preview)
         
         self.capacity_label = QLabel("📊 ความจุ: 0 บิต | ใช้ไป: 0 บิต")
@@ -118,8 +126,16 @@ class ImageTab(QWidget):
         self.progress_bar = QProgressBar()
         layout.addWidget(self.progress_bar)
 
+    def load_example_list(self):
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        example_dir = os.path.join(base_dir, "photoexample")
+        if os.path.exists(example_dir):
+            images = [f for f in os.listdir(example_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))]
+            self.example_selector.addItems(images)
+
     def load_image(self, path):
         if not os.path.exists(path): return
+        logger.log("info", f"ImageTab: โหลดภาพจาก {path}")
         self.selected_image = path
         pixmap = QPixmap(path).scaled(400, 300, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.image_preview.setPixmap(pixmap)
@@ -131,14 +147,12 @@ class ImageTab(QWidget):
         if path: self.load_image(path)
 
     def load_example_image(self):
-        idx = self.example_selector.currentIndex()
+        name = self.example_selector.currentText()
+        if not name: return
         base_dir = os.path.dirname(os.path.dirname(__file__))
-        example_dir = os.path.join(base_dir, "photoexample")
-        if not os.path.exists(example_dir): return
-        
-        images = sorted([f for f in os.listdir(example_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))])
-        if idx < len(images):
-            self.load_image(os.path.join(example_dir, images[idx]))
+        path = os.path.join(base_dir, "photoexample", name)
+        if os.path.exists(path):
+            self.load_image(path)
 
     def update_capacity(self):
         if not self.selected_image: return
@@ -162,6 +176,8 @@ class ImageTab(QWidget):
         if not msg: return
         
         mode = self.mode_selector.currentIndex()
+        mode_name = self.mode_selector.currentText()
+        logger.log("info", f"ImageTab: เริ่มกระบวนการซ่อนข้อความ (โหมด: {mode_name})")
         output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "photoexample", "output")
         os.makedirs(output_dir, exist_ok=True)
         
@@ -184,6 +200,8 @@ class ImageTab(QWidget):
     def process_extract(self):
         if not self.selected_image: return
         mode = self.mode_selector.currentIndex()
+        mode_name = self.mode_selector.currentText()
+        logger.log("info", f"ImageTab: เริ่มกระบวนการถอดข้อความ (โหมด: {mode_name})")
         
         try:
             self.progress_bar.setValue(50)

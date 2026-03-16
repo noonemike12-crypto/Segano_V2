@@ -163,6 +163,7 @@ def run_app(app):
             content_layout.setContentsMargins(15, 15, 15, 15)
             
             self.tabs = QTabWidget()
+            self.tabs.currentChanged.connect(self.on_tab_changed)
             self.tabs.addTab(image_tab.ImageTab(), "🖼️ รูปภาพ")
             self.tabs.addTab(audio_tab.AudioTab(), "🎵 เสียง")
             self.tabs.addTab(video_tab.VideoTab(), "🎬 วิดีโอ")
@@ -196,6 +197,10 @@ def run_app(app):
             footer_layout.addWidget(version)
             
             main_layout.addWidget(footer)
+
+        def on_tab_changed(self, index):
+            tab_name = self.tabs.tabText(index)
+            logger.log("info", f"เปลี่ยนไปยังแท็บ: {tab_name}")
 
         def update_status(self):
             process = psutil.Process(os.getpid())
@@ -255,6 +260,7 @@ def run_app(app):
     # จำลองการโหลด
     QTimer.singleShot(2000, splash.close)
     
+    logger.log("info", "SIENG PRO: เริ่มต้นแอปพลิเคชัน")
     window = SIENGApp()
     QTimer.singleShot(2000, window.show)
     
