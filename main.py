@@ -203,9 +203,12 @@ def run_app(app):
             logger.log("info", f"เปลี่ยนไปยังแท็บ: {tab_name}")
 
         def update_status(self):
-            process = psutil.Process(os.getpid())
-            mem = process.memory_info().rss / (1024 * 1024)
-            self.mem_label.setText(f"💾 หน่วยความจำ: {mem:.1f} MB")
+            try:
+                process = psutil.Process(os.getpid())
+                mem = process.memory_info().rss / (1024 * 1024)
+                self.mem_label.setText(f"💾 หน่วยความจำ: {mem:.1f} MB")
+            except Exception:
+                self.mem_label.setText("💾 หน่วยความจำ: N/A")
 
         def show_help(self):
             msg = QMessageBox()

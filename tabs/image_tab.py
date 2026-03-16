@@ -110,7 +110,7 @@ class ImageTab(QWidget):
         self.hide_btn.setObjectName("primaryBtn")
         self.hide_btn.clicked.connect(self.process_hide)
         
-        self.extract_btn = QPushButton("🔓 ถอดข้อความ (Extract)")
+        self.extract_btn = QPushButton("🔍 ถอดข้อความ (Auto-Scan All)")
         self.extract_btn.setObjectName("secondaryBtn")
         self.extract_btn.clicked.connect(self.process_extract)
         
@@ -199,19 +199,40 @@ class ImageTab(QWidget):
 
     def process_extract(self):
         if not self.selected_image: return
-        mode = self.mode_selector.currentIndex()
-        mode_name = self.mode_selector.currentText()
-        logger.log("info", f"ImageTab: เริ่มกระบวนการถอดข้อความ (โหมด: {mode_name})")
+        logger.log("info", "ImageTab: เริ่มกระบวนการถอดข้อความ (ลองทุกโหมด)")
         
+        self.result_output.setPlainText("🔍 กำลังตรวจสอบทุกโหมดการซ่อน...")
+        self.progress_bar.setValue(10)
+        
+        results = []
         try:
-            self.progress_bar.setValue(50)
-            res = ""
-            if mode == 0: res = extract_lsb_image(self.selected_image)
-            elif mode == 1: res = extract_alpha_channel(self.selected_image)
-            elif mode == 2: res = extract_edge_detection(self.selected_image)
+            # 1. LSB
+            self.progress_bar.setValue(30)
+            res_lsb = extract_lsb_image(self.selected_image)
+            if res_lsb and res_lsb != "ไม่พบข้อมูลที่ซ่อนอยู่":
+                results.append(f"🔹 [LSB]: {res_lsb}")
+
+            # 2. Alpha
+            self.progress_bar.setValue(60)
+            res_alpha = extract_alpha_channel(self.selected_image)
+            if res_alpha and res_alpha not in ["ไม่พบข้อมูลที่ซ่อนอยู่", "ไม่พบช่อง Alpha ในภาพนี้"]:
+                results.append(f"🔍 [Alpha]: {res_alpha}")
+
+            # 3. Edge
+            self.progress_bar.setValue(90)
+            res_edge = extract_edge_detection(self.selected_image)
+            if res_edge and res_edge != "ไม่พบข้อมูลที่ซ่อนอยู่":
+                results.append(f"📐 [Edge]: {res_edge}")
             
             self.progress_bar.setValue(100)
-            self.result_output.setPlainText(f"🔓 ข้อความที่พบ:\n{res}")
+            
+            if not results:
+                self.result_output.setPlainText("❌ ไม่พบข้อมูลที่ซ่อนอยู่ด้วยวิธีใดเลย\n(ตรวจสอบว่าเลือกโหมดการซ่อนถูกตอนบันทึกหรือไม่)")
+            else:
+                final_text = "🔓 พบข้อมูลที่ซ่อนอยู่:\n" + "="*30 + "\n"
+                final_text += "\n\n".join(results)
+                self.result_output.setPlainText(final_text)
+                
         except Exception as e:
             self.result_output.setPlainText(f"❌ เกิดข้อผิดพลาด: {str(e)}")
             self.progress_bar.setValue(0)

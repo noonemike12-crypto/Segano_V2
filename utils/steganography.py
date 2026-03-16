@@ -51,11 +51,15 @@ def extract_lsb_image(image_path):
     flat_arr = arr.flatten()
     
     binary_message = ""
+    found = False
     for val in flat_arr:
         binary_message += str(val & 1)
         if len(binary_message) >= 8 and binary_message[-8:] == '00000000':
+            found = True
             break
             
+    if not found:
+        return "ไม่พบข้อมูลที่ซ่อนอยู่"
     return binary_to_string(binary_message[:-8])
 
 def hide_alpha_channel(image_path, message, output_path):
@@ -191,9 +195,13 @@ def extract_lsb_video(video_path):
         
     flat_frame = frame.flatten()
     binary_message = ""
+    found = False
     for val in flat_frame:
         binary_message += str(val & 1)
         if len(binary_message) >= 8 and binary_message[-8:] == '00000000':
-            return binary_to_string(binary_message[:-8])
+            found = True
+            break
             
-    return "ไม่พบข้อมูลที่ซ่อนอยู่"
+    if not found:
+        return "ไม่พบข้อมูลที่ซ่อนอยู่"
+    return binary_to_string(binary_message[:-8])

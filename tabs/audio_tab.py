@@ -228,12 +228,18 @@ class AudioTab(QWidget):
                 raise ValueError("รองรับเฉพาะไฟล์เสียง 8-bit หรือ 16-bit เท่านั้น")
 
             bin_msg = ""
+            found = False
             for b in audio_data:
                 bin_msg += str(b & 1)
-                if len(bin_msg) >= 8 and bin_msg[-8:] == '00000000': break
+                if len(bin_msg) >= 8 and bin_msg[-8:] == '00000000':
+                    found = True
+                    break
             
-            res = binary_to_string(bin_msg[:-8])
-            self.log_output.append(f"🔓 ข้อความที่พบ: {res}")
+            if not found:
+                self.log_output.append("❌ ไม่พบข้อมูลที่ซ่อนอยู่")
+            else:
+                res = binary_to_string(bin_msg[:-8])
+                self.log_output.append(f"🔓 ข้อความที่พบ: {res}")
             if use_path == "temp_extract.wav": os.remove(use_path)
         except Exception as e:
             self.log_output.append(f"❌ เกิดข้อผิดพลาด: {str(e)}")
