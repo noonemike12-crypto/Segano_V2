@@ -133,7 +133,7 @@ class FileInfoTab(QWidget):
             (
                 ffmpeg
                 .input(self.selected_file)
-                .output(output_path, **{f"metadata:{field}": val}, codec="copy")
+                .output(output_path, metadata=f"{field}={val}", codec="copy")
                 .overwrite_output()
                 .run()
             )

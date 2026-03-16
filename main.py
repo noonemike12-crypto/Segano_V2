@@ -29,16 +29,35 @@ def auto_setup():
     except ImportError: missing.append("pycryptodome")
     try: import gnupg
     except ImportError: missing.append("python-gnupg")
+    try: import PIL
+    except ImportError: missing.append("Pillow")
+    try: import pydub
+    except ImportError: missing.append("pydub")
+    try: import soundfile
+    except ImportError: missing.append("soundfile")
+    try: import sounddevice
+    except ImportError: missing.append("sounddevice")
     
-    if missing:
-        print(f"Missing libraries: {', '.join(missing)}")
-        # เรายังไม่สามารถแสดง QMessageBox ได้ที่นี่เพราะยังไม่ได้สร้าง QApplication
-        # แต่จะเก็บไว้แจ้งเตือนหลังจากสร้างแอปแล้ว
-        return missing
-    return []
+    # ตรวจสอบ ffmpeg (System dependency)
+    ffmpeg_missing = False
+    try:
+        subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        ffmpeg_missing = True
+    
+    if missing or ffmpeg_missing:
+        error_msg = ""
+        if missing:
+            error_msg += f"ไม่พบไลบรารี: {', '.join(missing)}\n"
+        if ffmpeg_missing:
+            error_msg += "ไม่พบโปรแกรม 'ffmpeg' ในระบบ (จำเป็นสำหรับวิดีโอและเสียง)\n"
+        
+        print(error_msg)
+        return missing, ffmpeg_missing
+    return [], False
 
 # รัน setup ก่อนเริ่มแอป
-missing_libs = auto_setup()
+missing_libs, ffmpeg_is_missing = auto_setup()
 
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
@@ -183,9 +202,16 @@ class SIENGApp(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     
-    if missing_libs:
-        QMessageBox.critical(None, "ข้อผิดพลาด", f"ไม่พบไลบรารีที่จำเป็น: {', '.join(missing_libs)}\nกรุณารัน 'pip install -r requirements.txt'")
-        sys.exit(1)
+    if missing_libs or ffmpeg_is_missing:
+        msg = ""
+        if missing_libs:
+            msg += f"❌ ไม่พบไลบรารี: {', '.join(missing_libs)}\nกรุณารัน 'pip install -r requirements.txt'\n\n"
+        if ffmpeg_is_missing:
+            msg += "❌ ไม่พบโปรแกรม 'ffmpeg' ในระบบ\nกรุณาติดตั้ง ffmpeg และเพิ่มลงใน PATH (จำเป็นสำหรับวิดีโอและเสียง)"
+            
+        QMessageBox.critical(None, "ข้อผิดพลาดในการเริ่มต้น", msg)
+        if missing_libs:
+            sys.exit(1)
     
     # Path to logo/icon
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")

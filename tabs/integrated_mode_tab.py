@@ -1,11 +1,15 @@
 import os
 import base64
 import uuid
+import ffmpeg
+import gnupg
+from docx import Document
 from datetime import datetime
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, 
     QPushButton, QComboBox, QTextEdit, QFrame, QFileDialog, 
-    QTableWidget, QTableWidgetItem, QHeaderView, QProgressBar, QTabWidget, QPlainTextEdit
+    QTableWidget, QTableWidgetItem, QHeaderView, QProgressBar, QTabWidget, QPlainTextEdit,
+    QMessageBox
 )
 from PyQt5.QtCore import Qt
 
@@ -172,10 +176,47 @@ class IntegrationTab(QWidget):
                 self.log_output.append(f"✅ สำเร็จ!\n- ส่วนที่ 1: {out_img}\n- ส่วนที่ 2: {out_audio}")
 
             elif mode == 1: # โหมด 2: DOCX + RSA + Video Metadata
+                if not self.selected_files:
+                    raise ValueError("โหมดนี้ต้องการไฟล์วิดีโออย่างน้อย 1 ไฟล์")
+                
+                self.log_output.append("🔑 กำลังสร้างกุญแจ RSA...")
+                priv_key, pub_key = CryptoUtils.rsa_generate_keys()
+                
+                # บันทึกกุญแจไว้ในโฟลเดอร์ผลลัพธ์
+                keys_dir = os.path.join("output_files", "keys")
+                os.makedirs(keys_dir, exist_ok=True)
+                with open(os.path.join(keys_dir, "mode2_private.pem"), "w") as f: f.write(priv_key)
+                with open(os.path.join(keys_dir, "mode2_public.pem"), "w") as f: f.write(pub_key)
+                
+                self.log_output.append("🔐 เข้ารหัสข้อความด้วย RSA...")
+                encrypted = CryptoUtils.rsa_encrypt(text, pub_key)
+                
                 self.log_output.append("📄 สร้างไฟล์ DOCX...")
-                # Logic สำหรับสร้าง DOCX และซ่อนใน Video Metadata
-                self.log_output.append("⚠️ โหมดนี้ต้องการไลบรารี python-docx และ msoffcrypto")
-                self.log_output.append("✅ สำเร็จ (จำลอง)")
+                doc = Document()
+                doc.add_heading('SIENG PRO Secure Document', 0)
+                doc.add_paragraph(f"Generated at: {datetime.now()}")
+                doc.add_paragraph("This document contains encrypted data.")
+                doc.add_paragraph(encrypted)
+                
+                out_docx = os.path.join("output_files", "mode2_secure.docx")
+                os.makedirs(os.path.dirname(out_docx), exist_ok=True)
+                doc.save(out_docx)
+                
+                self.log_output.append("🎬 ซ่อนใน Video Metadata...")
+                video_file = self.selected_files[0]
+                out_video = os.path.join("vdio", "output", "mode2_meta_" + os.path.basename(video_file))
+                os.makedirs(os.path.dirname(out_video), exist_ok=True)
+                
+                # ใช้ ffmpeg ซ่อน encrypted text ใน comment metadata
+                (
+                    ffmpeg
+                    .input(video_file)
+                    .output(out_video, metadata=f"comment={encrypted}", codec="copy")
+                    .overwrite_output()
+                    .run()
+                )
+                
+                self.log_output.append(f"✅ สำเร็จ!\n- ไฟล์ DOCX: {out_docx}\n- วิดีโอ (Metadata): {out_video}\n- กุญแจ RSA: {keys_dir}")
 
             elif mode == 2: # โหมด 3: AES + แบ่ง 3 ส่วน (ภาพ + เสียง + วิดีโอ)
                 if len(self.selected_files) < 3:
@@ -205,6 +246,83 @@ class IntegrationTab(QWidget):
                     f_out.write(b"SIENG_START" + p3.encode('utf-8') + b"SIENG_END")
                 
                 self.log_output.append(f"✅ สำเร็จ!\n- ส่วนที่ 1: {out_img}\n- ส่วนที่ 2: {out_audio}\n- ส่วนที่ 3: {out_video}")
+
+            elif mode == 3: # โหมด 4: AES + RSA + Metadata
+                if len(self.selected_files) < 2:
+                    raise ValueError("โหมดนี้ต้องการไฟล์อย่างน้อย 2 ไฟล์")
+                
+                self.log_output.append("🔐 เข้ารหัส AES...")
+                aes_key = "aes_key_for_mode4_!!!!"
+                encrypted_text = CryptoUtils.aes_encrypt(text, aes_key)
+                
+                self.log_output.append("🔑 เข้ารหัส AES Key ด้วย RSA...")
+                priv_key, pub_key = CryptoUtils.rsa_generate_keys()
+                encrypted_key = CryptoUtils.rsa_encrypt(aes_key, pub_key)
+                
+                self.log_output.append("🎬 ซ่อนข้อมูลใน Metadata หลายไฟล์...")
+                out_files = []
+                for i, f_path in enumerate(self.selected_files[:2]):
+                    out_path = os.path.join("output_files", f"mode4_meta_{i}_{os.path.basename(f_path)}")
+                    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                    
+                    meta_val = encrypted_text if i == 0 else encrypted_key
+                    field = "comment" if i == 0 else "title"
+                    
+                    try:
+                        (
+                            ffmpeg
+                            .input(f_path)
+                            .output(out_path, metadata=f"{field}={meta_val}", codec="copy")
+                            .overwrite_output()
+                            .run()
+                        )
+                        out_files.append(out_path)
+                    except:
+                        with open(f_path, 'rb') as f_in, open(out_path, 'wb') as f_out:
+                            f_out.write(f_in.read())
+                            f_out.write(f"\nSIENG_META_{field}:{meta_val}".encode())
+                        out_files.append(out_path)
+                
+                self.log_output.append(f"✅ สำเร็จ!\n- ไฟล์ผลลัพธ์: {', '.join(out_files)}")
+
+            elif mode == 4: # โหมด 5: GPG + Metadata + EOF
+                if not self.selected_files:
+                    raise ValueError("ต้องการไฟล์อย่างน้อย 1 ไฟล์")
+                
+                self.log_output.append("🔐 เข้ารหัสด้วย GPG (Symmetric)...")
+                gpg = gnupg.GPG()
+                passphrase = "sieng_gpg_passphrase"
+                encrypted = gpg.encrypt(text, recipients=None, symmetric=True, passphrase=passphrase)
+                
+                if not encrypted.ok:
+                    raise ValueError(f"GPG Error: {encrypted.status}")
+                
+                enc_data = str(encrypted)
+                
+                self.log_output.append("🎬 ซ่อนใน Metadata และ EOF...")
+                f_path = self.selected_files[0]
+                out_path = os.path.join("output_files", f"mode5_hybrid_{os.path.basename(f_path)}")
+                os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                
+                half = len(enc_data) // 2
+                p1, p2 = enc_data[:half], enc_data[half:]
+                
+                try:
+                    (
+                        ffmpeg
+                        .input(f_path)
+                        .output(out_path, metadata=f"comment={p1}", codec="copy")
+                        .overwrite_output()
+                        .run()
+                    )
+                    with open(out_path, 'ab') as f:
+                        f.write(b"\nSIENG_GPG_PART2:" + p2.encode())
+                except:
+                    with open(f_path, 'rb') as f_in, open(out_path, 'wb') as f_out:
+                        f_out.write(f_in.read())
+                        f_out.write(b"\nSIENG_GPG_FULL:" + enc_data.encode())
+                
+                self.log_output.append(f"✅ สำเร็จ!\n- ไฟล์ผลลัพธ์: {out_path}\n- Passphrase: {passphrase}")
 
             else:
                 self.log_output.append("⚠️ โหมดอื่นๆ กำลังอยู่ในการพัฒนา")
