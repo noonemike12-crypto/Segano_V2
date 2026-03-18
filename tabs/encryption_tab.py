@@ -41,7 +41,7 @@ class EncryptionTab(QWidget):
         input_layout = QVBoxLayout(input_group)
         self.aes_input = QTextEdit()
         self.aes_input.setPlaceholderText("Paste or type the plaintext to encrypt, or the ciphertext to decrypt...")
-        self.aes_input.setMinimumHeight(400)
+        self.aes_input.setMinimumHeight(200)
         input_layout.addWidget(self.aes_input)
         
         btn_row = QHBoxLayout()

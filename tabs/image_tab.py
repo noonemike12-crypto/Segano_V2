@@ -54,7 +54,7 @@ class ImageTab(QWidget):
         
         self.image_preview = QLabel("Drag & Drop Image Here")
         self.image_preview.setAlignment(Qt.AlignCenter)
-        self.image_preview.setMinimumSize(400, 300)
+        self.image_preview.setMinimumSize(300, 200)
         self.image_preview.setStyleSheet("""
             border: 2px dashed #1e293b;
             border-radius: 15px;
@@ -66,7 +66,7 @@ class ImageTab(QWidget):
         
         self.capacity_label = QLabel("📊 Capacity: 0 bits | Used: 0 bits")
         self.capacity_label.setAlignment(Qt.AlignCenter)
-        self.capacity_label.setStyleSheet("color: #94a3b8; font-size: 9pt; margin-top: 10px;")
+        self.capacity_label.setStyleSheet("color: #94a3b8; font-size: 9pt; margin-top: 5px;")
         preview_layout.addWidget(self.capacity_label)
         
         left_col.addWidget(preview_group)

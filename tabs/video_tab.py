@@ -48,7 +48,7 @@ class VideoTab(QWidget):
         video_layout = QVBoxLayout(video_group)
         
         self.video_widget = QVideoWidget()
-        self.video_widget.setMinimumHeight(350)
+        self.video_widget.setMinimumHeight(250)
         self.video_widget.setStyleSheet("background-color: #0b0e14; border-radius: 12px;")
         self.media_player.setVideoOutput(self.video_widget)
         video_layout.addWidget(self.video_widget)

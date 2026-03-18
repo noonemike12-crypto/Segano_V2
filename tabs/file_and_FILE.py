@@ -43,7 +43,7 @@ class FileAndFileTab(QWidget):
         carrier_layout = QVBoxLayout(carrier_group)
         self.carrier_label = QLabel("Click to upload or drag & drop\nCarrier File (e.g., Image, Video, PDF)")
         self.carrier_label.setAlignment(Qt.AlignCenter)
-        self.carrier_label.setMinimumSize(400, 200)
+        self.carrier_label.setMinimumSize(300, 150)
         self.carrier_label.setStyleSheet("""
             border: 2px dashed #1e293b;
             border-radius: 15px;
@@ -66,7 +66,7 @@ class FileAndFileTab(QWidget):
         secret_group = QGroupBox("SECRET PAYLOAD FILES")
         secret_layout = QVBoxLayout(secret_group)
         self.secret_list = QListWidget()
-        self.secret_list.setMinimumHeight(200)
+        self.secret_list.setMinimumHeight(150)
         secret_layout.addWidget(self.secret_list)
         
         btn_row = QHBoxLayout()

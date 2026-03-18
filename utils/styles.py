@@ -46,11 +46,11 @@ def get_modern_style():
         QGroupBox {
             border: 1px solid #1e293b;
             border-radius: 12px;
-            margin-top: 20px;
-            padding: 20px;
+            margin-top: 15px;
+            padding: 15px;
             font-weight: bold;
             color: #94a3b8;
-            background-color: rgba(30, 41, 59, 0.3);
+            background-color: rgba(30, 41, 59, 0.2);
         }
         
         QGroupBox::title {
@@ -93,6 +93,16 @@ def get_modern_style():
         
         QPushButton#secondaryBtn:hover {
             background-color: rgba(13, 127, 242, 0.2);
+        }
+        
+        QPushButton#dangerBtn {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        
+        QPushButton#dangerBtn:hover {
+            background-color: rgba(239, 68, 68, 0.2);
         }
         
         QLineEdit, QTextEdit, QPlainTextEdit, QComboBox {
@@ -167,5 +177,14 @@ def get_modern_style():
         QLabel#subTitle {
             font-size: 11pt;
             color: #94a3b8;
+        }
+        
+        QScrollArea {
+            border: none;
+            background-color: transparent;
+        }
+        
+        QScrollArea > QWidget > QWidget {
+            background-color: transparent;
         }
     """

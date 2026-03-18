@@ -87,7 +87,7 @@ class IntegrationTab(QWidget):
         self.files_table.setColumnCount(3)
         self.files_table.setHorizontalHeaderLabels(["Filename", "Type", "Size"])
         self.files_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.files_table.setMinimumHeight(200)
+        self.files_table.setMinimumHeight(150)
         file_layout.addWidget(self.files_table)
         left_col.addWidget(file_group)
         
@@ -101,7 +101,7 @@ class IntegrationTab(QWidget):
         payload_layout = QVBoxLayout(payload_group)
         self.text_input = QPlainTextEdit()
         self.text_input.setPlaceholderText("Enter the sensitive data to be processed...")
-        self.text_input.setMinimumHeight(300)
+        self.text_input.setMinimumHeight(150)
         payload_layout.addWidget(self.text_input)
         right_col.addWidget(payload_group)
 
@@ -110,7 +110,7 @@ class IntegrationTab(QWidget):
         exec_layout = QVBoxLayout(exec_group)
         self.execute_btn = QPushButton("🚀 EXECUTE STRATEGY")
         self.execute_btn.setObjectName("primaryBtn")
-        self.execute_btn.setMinimumHeight(60)
+        self.execute_btn.setMinimumHeight(50)
         self.execute_btn.clicked.connect(self.process_integrated)
         exec_layout.addWidget(self.execute_btn)
         right_col.addWidget(exec_group)

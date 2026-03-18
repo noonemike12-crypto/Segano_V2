@@ -49,7 +49,7 @@ class AudioTab(QWidget):
         
         self.path_label = QLabel("Drag and drop audio file\nMP3, WAV, or FLAC")
         self.path_label.setAlignment(Qt.AlignCenter)
-        self.path_label.setMinimumSize(400, 150)
+        self.path_label.setMinimumSize(300, 100)
         self.path_label.setStyleSheet("""
             border: 2px dashed #1e293b;
             border-radius: 15px;

@@ -70,7 +70,7 @@ class PGPTab(QWidget):
         
         self.message_input = QTextEdit()
         self.message_input.setPlaceholderText("Enter plaintext message or PGP encrypted block...")
-        self.message_input.setMinimumHeight(300)
+        self.message_input.setMinimumHeight(150)
         msg_layout.addWidget(self.message_input)
         
         action_grid = QGridLayout()
