@@ -74,7 +74,7 @@ def run_app(app):
     from PyQt5.QtWidgets import (
         QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
         QTabWidget, QLabel, QFrame, QPushButton, QSystemTrayIcon, 
-        QMenu, QMessageBox, QSplashScreen
+        QMenu, QMessageBox, QSplashScreen, QProgressBar, QStackedWidget
     )
     from PyQt5.QtGui import QIcon, QFont, QPixmap, QPainter
     from PyQt5.QtCore import Qt, QTimer

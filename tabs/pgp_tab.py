@@ -5,7 +5,7 @@ import tempfile
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, 
     QPushButton, QTextEdit, QLineEdit, QFrame, QFileDialog, 
-    QMessageBox, QInputDialog, QListWidget, QComboBox, QDialog, QFormLayout
+    QMessageBox, QInputDialog, QListWidget, QComboBox, QDialog, QFormLayout, QGridLayout
 )
 from PyQt5.QtCore import Qt
 import gnupg
