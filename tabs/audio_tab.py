@@ -82,15 +82,18 @@ class AudioTab(QWidget):
         action_layout = QVBoxLayout()
         
         btns = QHBoxLayout()
-        self.hide_btn = QPushButton("🔒 ซ่อนข้อความ")
+        self.hide_btn = QPushButton("🔒 ซ่อนข้อความ (Hide)")
         self.hide_btn.setObjectName("primaryBtn")
+        self.hide_btn.setToolTip("ซ่อนข้อความลงในไฟล์เสียงที่เลือก (LSB)")
         self.hide_btn.clicked.connect(self.process_hide)
         
-        self.extract_btn = QPushButton("🔓 ถอดข้อความ")
+        self.extract_btn = QPushButton("🔓 ถอดข้อความ (Extract)")
         self.extract_btn.setObjectName("secondaryBtn")
+        self.extract_btn.setToolTip("ดึงข้อความลับออกจากไฟล์เสียง")
         self.extract_btn.clicked.connect(self.process_extract)
         
         self.folder_btn = QPushButton("📁 โฟลเดอร์ผลลัพธ์")
+        self.folder_btn.setToolTip("เปิดโฟลเดอร์ที่เก็บไฟล์เสียงที่ซ่อนข้อความแล้ว")
         self.folder_btn.clicked.connect(self.open_output_folder)
         
         btns.addWidget(self.hide_btn)

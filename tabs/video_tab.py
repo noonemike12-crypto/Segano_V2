@@ -76,22 +76,27 @@ class VideoTab(QWidget):
         layout.addWidget(message_group)
 
         # --- ส่วนดำเนินการ ---
+        action_group = QGroupBox("🛠️ การดำเนินการ (Actions)")
         action_layout = QHBoxLayout()
-        self.hide_btn = QPushButton("🔒 ซ่อนข้อความ")
+        self.hide_btn = QPushButton("🔒 ซ่อนข้อความ (Hide)")
         self.hide_btn.setObjectName("primaryBtn")
+        self.hide_btn.setToolTip("ซ่อนข้อความลงในเฟรมแรกของวิดีโอ (LSB)")
         self.hide_btn.clicked.connect(self.process_hide)
         
-        self.extract_btn = QPushButton("🔓 ถอดข้อความ")
+        self.extract_btn = QPushButton("🔓 ถอดข้อความ (Extract)")
         self.extract_btn.setObjectName("secondaryBtn")
+        self.extract_btn.setToolTip("ดึงข้อความลับออกจากวิดีโอ")
         self.extract_btn.clicked.connect(self.process_extract)
         
         self.folder_btn = QPushButton("📁 โฟลเดอร์ผลลัพธ์")
+        self.folder_btn.setToolTip("เปิดโฟลเดอร์ที่เก็บไฟล์วิดีโอที่ซ่อนข้อความแล้ว")
         self.folder_btn.clicked.connect(self.open_output_folder)
         
         action_layout.addWidget(self.hide_btn)
         action_layout.addWidget(self.extract_btn)
         action_layout.addWidget(self.folder_btn)
-        layout.addLayout(action_layout)
+        action_group.setLayout(action_layout)
+        layout.addWidget(action_group)
         
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)

@@ -146,6 +146,73 @@ def extract_edge_detection(image_path):
 
 # --- Video Steganography Logic ---
 
+def hide_dct_image(image_path, message, output_path):
+    """ซ่อนข้อมูลในความถี่ของภาพ (DCT) - Simplified version"""
+    img = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    if img is None: raise ValueError("ไม่สามารถโหลดภาพได้")
+    
+    # แปลงเป็น YCrCb เพื่อซ่อนในช่อง Y (Luminance)
+    img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+    y, cr, cb = cv2.split(img_yuv)
+    
+    # ทำงานกับบล็อก 8x8
+    h, w = y.shape
+    binary_message = string_to_binary(message) + '00000000'
+    
+    if len(binary_message) > (h // 8) * (w // 8):
+        raise ValueError("ข้อความยาวเกินความจุของ DCT (1 บิตต่อบล็อก 8x8)")
+        
+    y_float = np.float32(y)
+    idx = 0
+    for i in range(0, h - 8, 8):
+        for j in range(0, w - 8, 8):
+            if idx < len(binary_message):
+                block = y_float[i:i+8, j:j+8]
+                dct_block = cv2.dct(block)
+                
+                # ซ่อนในค่าสัมประสิทธิ์ความถี่ต่ำ (Mid-band) เพื่อความทนทาน
+                # ตำแหน่ง (4,4) เป็นตัวอย่าง
+                val = dct_block[4, 4]
+                if int(binary_message[idx]) == 1:
+                    if val <= 0: dct_block[4, 4] = 1.0
+                else:
+                    if val > 0: dct_block[4, 4] = -1.0
+                
+                y_float[i:i+8, j:j+8] = cv2.idct(dct_block)
+                idx += 1
+            else: break
+        if idx >= len(binary_message): break
+        
+    y_final = np.uint8(np.clip(y_float, 0, 255))
+    img_final = cv2.merge([y_final, cr, cb])
+    img_final = cv2.cvtColor(img_final, cv2.COLOR_YCrCb2BGR)
+    cv2.imwrite(output_path, img_final)
+    return True
+
+def extract_dct_image(image_path):
+    """ดึงข้อมูลจากความถี่ DCT"""
+    img = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    if img is None: return "ไม่สามารถโหลดภาพได้"
+    
+    img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+    y, _, _ = cv2.split(img_yuv)
+    h, w = y.shape
+    y_float = np.float32(y)
+    
+    binary_message = ""
+    for i in range(0, h - 8, 8):
+        for j in range(0, w - 8, 8):
+            block = y_float[i:i+8, j:j+8]
+            dct_block = cv2.dct(block)
+            
+            if dct_block[4, 4] > 0: binary_message += "1"
+            else: binary_message += "0"
+            
+            if len(binary_message) >= 8 and binary_message[-8:] == '00000000':
+                return binary_to_string(binary_message[:-8])
+                
+    return "ไม่พบข้อมูลที่ซ่อนอยู่"
+
 def hide_lsb_video(video_path, message, output_path):
     """ซ่อนข้อมูลแบบ LSB ในเฟรมแรกของวิดีโอ (Simple implementation)"""
     cap = cv2.VideoCapture(video_path)

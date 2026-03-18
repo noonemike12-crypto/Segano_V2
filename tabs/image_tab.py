@@ -50,7 +50,12 @@ class ImageTab(QWidget):
         
         config_layout.addWidget(QLabel("⚙️ โหมดการซ่อน:"), 1, 0)
         self.mode_selector = QComboBox()
-        self.mode_selector.addItems(["🔹 LSB (มาตรฐาน)", "🔍 Alpha Channel (PNG)", "📐 Edge Detection (ขอบภาพ)"])
+        self.mode_selector.addItems([
+            "🔹 LSB (มาตรฐาน)", 
+            "🔍 Alpha Channel (PNG)", 
+            "📐 Edge Detection (ขอบภาพ)",
+            "📡 DCT (ความถี่ภาพ - ทนทานสูง)"
+        ])
         self.mode_selector.currentIndexChanged.connect(self.update_capacity)
         config_layout.addWidget(self.mode_selector, 1, 1, 1, 2)
         
@@ -104,26 +109,32 @@ class ImageTab(QWidget):
         layout.addLayout(content_layout)
 
         # --- ส่วนปุ่มดำเนินการ ---
+        action_group = QGroupBox("🛠️ การดำเนินการ (Actions)")
         action_layout = QHBoxLayout()
         
         self.hide_btn = QPushButton("🔒 ซ่อนข้อความ (Hide)")
         self.hide_btn.setObjectName("primaryBtn")
+        self.hide_btn.setToolTip("ซ่อนข้อความลงในภาพที่เลือกด้วยโหมดที่กำหนด")
         self.hide_btn.clicked.connect(self.process_hide)
         
         self.extract_btn = QPushButton("🔍 ถอดข้อความ (Auto-Scan All)")
         self.extract_btn.setObjectName("secondaryBtn")
+        self.extract_btn.setToolTip("ค้นหาข้อความที่ซ่อนอยู่ในภาพด้วยทุกโหมดอัตโนมัติ")
         self.extract_btn.clicked.connect(self.process_extract)
         
         self.folder_btn = QPushButton("📁 เปิดโฟลเดอร์ผลลัพธ์")
+        self.folder_btn.setToolTip("เปิดโฟลเดอร์ที่เก็บไฟล์ภาพที่ซ่อนข้อความแล้ว")
         self.folder_btn.clicked.connect(self.open_output_folder)
         
         action_layout.addWidget(self.hide_btn)
         action_layout.addWidget(self.extract_btn)
         action_layout.addWidget(self.folder_btn)
         
-        layout.addLayout(action_layout)
+        action_group.setLayout(action_layout)
+        layout.addWidget(action_group)
         
         self.progress_bar = QProgressBar()
+        self.progress_bar.setFormat("⏳ กำลังดำเนินการ... %p%")
         layout.addWidget(self.progress_bar)
 
     def load_example_list(self):
@@ -190,6 +201,7 @@ class ImageTab(QWidget):
             if mode == 0: hide_lsb_image(self.selected_image, msg, output_path)
             elif mode == 1: hide_alpha_channel(self.selected_image, msg, output_path)
             elif mode == 2: hide_edge_detection(self.selected_image, msg, output_path)
+            elif mode == 3: hide_dct_image(self.selected_image, msg, output_path)
             
             self.progress_bar.setValue(100)
             self.result_output.setPlainText(f"✅ ซ่อนข้อมูลสำเร็จ!\nบันทึกที่: {output_path}")
@@ -219,10 +231,16 @@ class ImageTab(QWidget):
                 results.append(f"🔍 [Alpha]: {res_alpha}")
 
             # 3. Edge
-            self.progress_bar.setValue(90)
+            self.progress_bar.setValue(80)
             res_edge = extract_edge_detection(self.selected_image)
             if res_edge and res_edge != "ไม่พบข้อมูลที่ซ่อนอยู่":
                 results.append(f"📐 [Edge]: {res_edge}")
+            
+            # 4. DCT
+            self.progress_bar.setValue(95)
+            res_dct = extract_dct_image(self.selected_image)
+            if res_dct and res_dct != "ไม่พบข้อมูลที่ซ่อนอยู่":
+                results.append(f"📡 [DCT]: {res_dct}")
             
             self.progress_bar.setValue(100)
             
