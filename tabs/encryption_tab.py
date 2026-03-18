@@ -102,14 +102,14 @@ class EncryptionTab(QWidget):
         rsa_layout.addWidget(self.gen_rsa_btn)
         main_layout.addWidget(rsa_group)
 
-        # --- ส่วนแสดงผลลัพธ์รวม ---
-        result_group = QGroupBox("📊 ผลลัพธ์ (Output)")
-        result_layout = QVBoxLayout()
+        # --- Result Section ---
+        result_group = QGroupBox("CRYPTOGRAPHIC OUTPUT")
+        result_layout = QVBoxLayout(result_group)
         self.result_output = QTextEdit()
         self.result_output.setReadOnly(True)
+        self.result_output.setPlaceholderText("Encrypted/Decrypted output will appear here...")
         result_layout.addWidget(self.result_output)
-        result_group.setLayout(result_layout)
-        layout.addWidget(result_group)
+        main_layout.addWidget(result_group)
 
     def generate_aes_key(self):
         key = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
