@@ -24,85 +24,115 @@ class VideoTab(QWidget):
         self.setAcceptDrops(True)
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(15)
-        layout.setContentsMargins(20, 20, 20, 20)
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(30, 30, 30, 30)
 
-        # --- ส่วนจัดการไฟล์วิดีโอ ---
-        video_group = QGroupBox("🎬 การจัดการไฟล์วิดีโอ (Video Management)")
-        video_layout = QVBoxLayout()
+        # --- Top Section: Intro ---
+        intro_layout = QVBoxLayout()
+        title = QLabel("Embed Hidden Data in Video")
+        title.setStyleSheet("font-size: 18pt; font-weight: 800; color: white;")
+        subtitle = QLabel("Securely hide encrypted messages within high-definition video carriers using LSB injection.")
+        subtitle.setObjectName("subTitle")
+        intro_layout.addWidget(title)
+        intro_layout.addWidget(subtitle)
+        main_layout.addLayout(intro_layout)
+
+        # --- Middle Section: Main Grid ---
+        grid_layout = QHBoxLayout()
+        grid_layout.setSpacing(30)
+
+        # Left Column: Video Preview
+        left_col = QVBoxLayout()
+        video_group = QGroupBox("CARRIER VIDEO PREVIEW")
+        video_layout = QVBoxLayout(video_group)
         
-        file_selection = QHBoxLayout()
-        self.example_selector = QComboBox()
-        self.example_selector.setPlaceholderText("เลือกวิดีโอตัวอย่าง...")
-        self.example_selector.currentIndexChanged.connect(self.load_example_video)
-        file_selection.addWidget(self.example_selector, 1)
-        
-        self.browse_btn = QPushButton("🔍 เลือกไฟล์วิดีโอ...")
-        self.browse_btn.clicked.connect(self.browse_video)
-        file_selection.addWidget(self.browse_btn, 1)
-        video_layout.addLayout(file_selection)
-        
-        self.path_label = QLabel("ยังไม่ได้เลือกไฟล์")
-        self.path_label.setAlignment(Qt.AlignCenter)
-        self.path_label.setStyleSheet("border: 2px dashed #4a5568; border-radius: 10px; padding: 10px;")
-        video_layout.addWidget(self.path_label)
-        
-        # ส่วนแสดงวิดีโอ
         self.video_widget = QVideoWidget()
-        self.video_widget.setMinimumHeight(300)
+        self.video_widget.setMinimumHeight(350)
+        self.video_widget.setStyleSheet("background-color: #0b0e14; border-radius: 12px;")
         self.media_player.setVideoOutput(self.video_widget)
         video_layout.addWidget(self.video_widget)
         
+        self.path_label = QLabel("No video selected")
+        self.path_label.setAlignment(Qt.AlignCenter)
+        self.path_label.setStyleSheet("color: #94a3b8; font-size: 9pt; margin-top: 10px;")
+        video_layout.addWidget(self.path_label)
+        
+        # Playback Controls
         playback_layout = QHBoxLayout()
-        self.play_btn = QPushButton("▶️ เล่น (Play)")
+        self.play_btn = QPushButton("▶️ Play")
         self.play_btn.clicked.connect(self.play_video)
-        self.stop_btn = QPushButton("⏹️ หยุด (Stop)")
+        self.stop_btn = QPushButton("⏹️ Stop")
         self.stop_btn.clicked.connect(self.stop_video)
         playback_layout.addWidget(self.play_btn)
         playback_layout.addWidget(self.stop_btn)
         video_layout.addLayout(playback_layout)
         
-        video_group.setLayout(video_layout)
-        layout.addWidget(video_group)
+        left_col.addWidget(video_group)
+        
+        # File Selection Buttons
+        file_btns = QHBoxLayout()
+        self.browse_btn = QPushButton("📁 Browse Video")
+        self.browse_btn.clicked.connect(self.browse_video)
+        self.example_selector = QComboBox()
+        self.example_selector.setPlaceholderText("Select Example...")
+        self.example_selector.currentIndexChanged.connect(self.load_example_video)
+        file_btns.addWidget(self.browse_btn)
+        file_btns.addWidget(self.example_selector)
+        left_col.addLayout(file_btns)
+        
+        grid_layout.addLayout(left_col, 3)
 
-        # --- ส่วนข้อความลับ ---
-        message_group = QGroupBox("💬 ข้อความลับ (Secret Message)")
-        message_layout = QVBoxLayout()
+        # Right Column: Payload & Settings
+        right_col = QVBoxLayout()
+        
+        # Payload Section
+        payload_group = QGroupBox("PAYLOAD CONFIGURATION")
+        payload_layout = QVBoxLayout(payload_group)
+        payload_layout.addWidget(QLabel("Secret Message:"))
         self.message_input = QTextEdit()
-        self.message_input.setPlaceholderText("พิมพ์ข้อความที่ต้องการซ่อนในวิดีโอ...")
-        message_layout.addWidget(self.message_input)
-        message_group.setLayout(message_layout)
-        layout.addWidget(message_group)
+        self.message_input.setPlaceholderText("Type the message you want to hide...")
+        payload_layout.addWidget(self.message_input)
+        right_col.addWidget(payload_group)
 
-        # --- ส่วนดำเนินการ ---
-        action_group = QGroupBox("🛠️ การดำเนินการ (Actions)")
-        action_layout = QHBoxLayout()
-        self.hide_btn = QPushButton("🔒 ซ่อนข้อความ (Hide)")
+        # Settings Section
+        settings_group = QGroupBox("ENCODING PARAMETERS")
+        settings_layout = QVBoxLayout(settings_group)
+        settings_layout.addWidget(QLabel("LSB Depth:"))
+        self.depth_selector = QComboBox()
+        self.depth_selector.addItems(["1 BIT (SECURE)", "2 BIT", "4 BIT (RISKY)"])
+        settings_layout.addWidget(self.depth_selector)
+        right_col.addWidget(settings_group)
+        
+        grid_layout.addLayout(right_col, 2)
+        main_layout.addLayout(grid_layout)
+
+        # --- Bottom Section: Actions ---
+        action_group = QGroupBox("ACTIONS")
+        action_layout = QHBoxLayout(action_group)
+        
+        self.hide_btn = QPushButton("🔒 Hide Message")
         self.hide_btn.setObjectName("primaryBtn")
-        self.hide_btn.setToolTip("ซ่อนข้อความลงในเฟรมแรกของวิดีโอ (LSB)")
         self.hide_btn.clicked.connect(self.process_hide)
         
-        self.extract_btn = QPushButton("🔓 ถอดข้อความ (Extract)")
+        self.extract_btn = QPushButton("🔓 Extract Message")
         self.extract_btn.setObjectName("secondaryBtn")
-        self.extract_btn.setToolTip("ดึงข้อความลับออกจากวิดีโอ")
         self.extract_btn.clicked.connect(self.process_extract)
         
-        self.folder_btn = QPushButton("📁 โฟลเดอร์ผลลัพธ์")
-        self.folder_btn.setToolTip("เปิดโฟลเดอร์ที่เก็บไฟล์วิดีโอที่ซ่อนข้อความแล้ว")
+        self.folder_btn = QPushButton("📁 Output Folder")
         self.folder_btn.clicked.connect(self.open_output_folder)
         
         action_layout.addWidget(self.hide_btn)
         action_layout.addWidget(self.extract_btn)
         action_layout.addWidget(self.folder_btn)
-        action_group.setLayout(action_layout)
-        layout.addWidget(action_group)
+        main_layout.addWidget(action_group)
         
+        # Logs
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
-        self.log_output.setPlaceholderText("บันทึกการทำงานจะแสดงที่นี่...")
+        self.log_output.setPlaceholderText("Operation logs...")
         self.log_output.setMaximumHeight(100)
-        layout.addWidget(self.log_output)
+        main_layout.addWidget(self.log_output)
         
         self.load_examples()
 

@@ -19,62 +19,91 @@ class FileAndFileTab(QWidget):
         self.setAcceptDrops(True)
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(15)
-        layout.setContentsMargins(20, 20, 20, 20)
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(30, 30, 30, 30)
 
-        # --- ส่วนเลือกไฟล์หลัก (Carrier) ---
-        carrier_group = QGroupBox("📦 ไฟล์หลักที่ใช้ซ่อน (Carrier File)")
-        carrier_layout = QHBoxLayout()
-        self.carrier_label = QLabel("ลากไฟล์หลักมาวางที่นี่")
+        # --- Top Section: Intro ---
+        intro_layout = QVBoxLayout()
+        title = QLabel("File-in-File Steganography")
+        title.setStyleSheet("font-size: 18pt; font-weight: 800; color: white;")
+        subtitle = QLabel("Conceal multiple secret files within a single carrier file using advanced appending and offset techniques.")
+        subtitle.setObjectName("subTitle")
+        intro_layout.addWidget(title)
+        intro_layout.addWidget(subtitle)
+        main_layout.addLayout(intro_layout)
+
+        # --- Middle Section: Main Grid ---
+        grid_layout = QHBoxLayout()
+        grid_layout.setSpacing(30)
+
+        # Left Column: Carrier Selection
+        left_col = QVBoxLayout()
+        carrier_group = QGroupBox("CARRIER FILE SELECTION")
+        carrier_layout = QVBoxLayout(carrier_group)
+        self.carrier_label = QLabel("Click to upload or drag & drop\nCarrier File (e.g., Image, Video, PDF)")
         self.carrier_label.setAlignment(Qt.AlignCenter)
-        self.carrier_label.setStyleSheet("border: 2px dashed #4a5568; border-radius: 10px; padding: 15px;")
-        carrier_layout.addWidget(self.carrier_label, 3)
-        self.carrier_btn = QPushButton("🔍 เลือกไฟล์...")
-        self.carrier_btn.clicked.connect(self.browse_carrier)
-        carrier_layout.addWidget(self.carrier_btn, 1)
-        carrier_group.setLayout(carrier_layout)
-        layout.addWidget(carrier_group)
-
-        # --- ส่วนเลือกไฟล์ที่จะซ่อน (Secret Files) ---
-        secret_group = QGroupBox("📁 ไฟล์ที่จะนำไปซ่อน (Secret Files)")
-        secret_layout = QVBoxLayout()
+        self.carrier_label.setMinimumSize(400, 200)
+        self.carrier_label.setStyleSheet("""
+            border: 2px dashed #1e293b;
+            border-radius: 15px;
+            color: #64748b;
+            font-size: 11pt;
+            background-color: #0b0e14;
+        """)
+        carrier_layout.addWidget(self.carrier_label)
         
+        self.carrier_btn = QPushButton("📁 Browse Carrier...")
+        self.carrier_btn.clicked.connect(self.browse_carrier)
+        carrier_layout.addWidget(self.carrier_btn)
+        left_col.addWidget(carrier_group)
+        grid_layout.addLayout(left_col, 3)
+
+        # Right Column: Secret Files & Actions
+        right_col = QVBoxLayout()
+        
+        # Secret Files List
+        secret_group = QGroupBox("SECRET PAYLOAD FILES")
+        secret_layout = QVBoxLayout(secret_group)
         self.secret_list = QListWidget()
+        self.secret_list.setMinimumHeight(200)
         secret_layout.addWidget(self.secret_list)
         
-        btns = QHBoxLayout()
-        self.add_secret_btn = QPushButton("➕ เพิ่มไฟล์...")
+        btn_row = QHBoxLayout()
+        self.add_secret_btn = QPushButton("➕ Add Files")
         self.add_secret_btn.clicked.connect(self.browse_secrets)
-        self.clear_secrets_btn = QPushButton("🗑️ ล้างทั้งหมด")
+        self.clear_secrets_btn = QPushButton("🗑️ Clear All")
         self.clear_secrets_btn.setObjectName("dangerBtn")
         self.clear_secrets_btn.clicked.connect(self.clear_secrets)
-        btns.addWidget(self.add_secret_btn)
-        btns.addWidget(self.clear_secrets_btn)
-        secret_layout.addLayout(btns)
-        
-        secret_group.setLayout(secret_layout)
-        layout.addWidget(secret_group)
+        btn_row.addWidget(self.add_secret_btn)
+        btn_row.addWidget(self.clear_secrets_btn)
+        secret_layout.addLayout(btn_row)
+        right_col.addWidget(secret_group)
 
-        # --- ส่วนดำเนินการ ---
-        action_layout = QHBoxLayout()
-        self.hide_btn = QPushButton("🔒 ซ่อนไฟล์ (Append)")
+        # Actions
+        action_group = QGroupBox("EXECUTION CONTROL")
+        action_layout = QVBoxLayout(action_group)
+        self.hide_btn = QPushButton("🔒 Hide Files (Append)")
         self.hide_btn.setObjectName("primaryBtn")
         self.hide_btn.clicked.connect(self.process_hide)
         
-        self.extract_btn = QPushButton("🔓 แยกไฟล์ออก (Extract)")
+        self.extract_btn = QPushButton("🔓 Extract Files")
         self.extract_btn.setObjectName("secondaryBtn")
         self.extract_btn.clicked.connect(self.process_extract)
         
         action_layout.addWidget(self.hide_btn)
         action_layout.addWidget(self.extract_btn)
-        layout.addLayout(action_layout)
+        right_col.addWidget(action_group)
+        
+        grid_layout.addLayout(right_col, 2)
+        main_layout.addLayout(grid_layout)
 
+        # Logs
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
-        self.log_output.setPlaceholderText("บันทึกการทำงาน...")
-        self.log_output.setMaximumHeight(150)
-        layout.addWidget(self.log_output)
+        self.log_output.setPlaceholderText("Operation logs...")
+        self.log_output.setMaximumHeight(100)
+        main_layout.addWidget(self.log_output)
 
     def browse_carrier(self):
         path, _ = QFileDialog.getOpenFileName(self, "เลือกไฟล์หลัก")

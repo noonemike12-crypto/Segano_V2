@@ -24,90 +24,119 @@ class AudioTab(QWidget):
         self.setAcceptDrops(True)
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(15)
-        layout.setContentsMargins(20, 20, 20, 20)
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(30, 30, 30, 30)
 
-        # --- ส่วนจัดการไฟล์เสียง ---
-        audio_group = QGroupBox("🎵 การจัดการไฟล์เสียง (Audio Management)")
-        audio_layout = QVBoxLayout()
+        # --- Top Section: Intro ---
+        intro_layout = QVBoxLayout()
+        title = QLabel("Hide Message in Audio")
+        title.setStyleSheet("font-size: 18pt; font-weight: 800; color: white;")
+        subtitle = QLabel("Securely embed your secret messages into audio files using advanced LSB steganography.")
+        subtitle.setObjectName("subTitle")
+        intro_layout.addWidget(title)
+        intro_layout.addWidget(subtitle)
+        main_layout.addLayout(intro_layout)
+
+        # --- Middle Section: Main Grid ---
+        grid_layout = QHBoxLayout()
+        grid_layout.setSpacing(30)
+
+        # Left Column: Audio Selection & Playback
+        left_col = QVBoxLayout()
+        audio_group = QGroupBox("SELECT CARRIER AUDIO")
+        audio_layout = QVBoxLayout(audio_group)
         
-        file_selection = QHBoxLayout()
-        self.example_selector = QComboBox()
-        self.example_selector.setPlaceholderText("เลือกไฟล์เสียงตัวอย่าง...")
-        self.example_selector.currentIndexChanged.connect(self.load_example_audio)
-        file_selection.addWidget(self.example_selector, 1)
-        
-        self.browse_btn = QPushButton("🔍 เลือกไฟล์เสียง...")
-        self.browse_btn.clicked.connect(self.browse_audio)
-        file_selection.addWidget(self.browse_btn, 1)
-        audio_layout.addLayout(file_selection)
-        
-        self.path_label = QLabel("ยังไม่ได้เลือกไฟล์")
+        self.path_label = QLabel("Drag and drop audio file\nMP3, WAV, or FLAC")
         self.path_label.setAlignment(Qt.AlignCenter)
-        self.path_label.setStyleSheet("border: 2px dashed #4a5568; border-radius: 10px; padding: 10px;")
+        self.path_label.setMinimumSize(400, 150)
+        self.path_label.setStyleSheet("""
+            border: 2px dashed #1e293b;
+            border-radius: 15px;
+            color: #64748b;
+            font-size: 11pt;
+            background-color: #0b0e14;
+        """)
         audio_layout.addWidget(self.path_label)
         
+        # Audio Selection Buttons
+        file_selection = QHBoxLayout()
+        self.browse_btn = QPushButton("📁 Browse Files")
+        self.browse_btn.clicked.connect(self.browse_audio)
+        self.example_selector = QComboBox()
+        self.example_selector.setPlaceholderText("Select Example...")
+        self.example_selector.currentIndexChanged.connect(self.load_example_audio)
+        file_selection.addWidget(self.browse_btn)
+        file_selection.addWidget(self.example_selector)
+        audio_layout.addLayout(file_selection)
+
+        # Playback Controls
         playback_layout = QHBoxLayout()
-        self.play_btn = QPushButton("▶️ เล่น (Play)")
+        self.play_btn = QPushButton("▶️ Play")
         self.play_btn.clicked.connect(self.play_audio)
-        self.stop_btn = QPushButton("⏹️ หยุด (Stop)")
+        self.stop_btn = QPushButton("⏹️ Stop")
         self.stop_btn.clicked.connect(self.stop_audio)
         playback_layout.addWidget(self.play_btn)
         playback_layout.addWidget(self.stop_btn)
         audio_layout.addLayout(playback_layout)
         
-        audio_group.setLayout(audio_layout)
-        layout.addWidget(audio_group)
+        left_col.addWidget(audio_group)
+        grid_layout.addLayout(left_col, 3)
 
-        # --- ส่วนข้อความและความจุ ---
-        message_group = QGroupBox("💬 ข้อความและความจุ (Message & Capacity)")
-        message_layout = QHBoxLayout()
+        # Right Column: Payload & Settings
+        right_col = QVBoxLayout()
         
+        # Payload Section
+        payload_group = QGroupBox("SECRET MESSAGE")
+        payload_layout = QVBoxLayout(payload_group)
         self.message_input = QTextEdit()
-        self.message_input.setPlaceholderText("พิมพ์ข้อความลับที่นี่...")
+        self.message_input.setPlaceholderText("Type the message you want to hide here...")
         self.message_input.textChanged.connect(self.update_capacity)
-        message_layout.addWidget(self.message_input, 2)
+        payload_layout.addWidget(self.message_input)
         
-        self.capacity_info = QLabel("ความจุ: N/A\nใช้ไป: 0 บิต")
-        self.capacity_info.setAlignment(Qt.AlignCenter)
-        self.capacity_info.setStyleSheet("background-color: #1a222d; border-radius: 10px; padding: 10px;")
-        message_layout.addWidget(self.capacity_info, 1)
-        
-        message_group.setLayout(message_layout)
-        layout.addWidget(message_group)
+        self.capacity_info = QLabel("Capacity: N/A | Used: 0 bits")
+        self.capacity_info.setStyleSheet("color: #94a3b8; font-size: 9pt; margin-top: 5px;")
+        payload_layout.addWidget(self.capacity_info)
+        right_col.addWidget(payload_group)
 
-        # --- ส่วนดำเนินการและผลลัพธ์ ---
-        action_group = QGroupBox("🚀 ดำเนินการ (Actions)")
-        action_layout = QVBoxLayout()
+        # Settings Section
+        settings_group = QGroupBox("ENCODING PARAMETERS")
+        settings_layout = QVBoxLayout(settings_group)
+        settings_layout.addWidget(QLabel("Encoding Depth:"))
+        self.depth_selector = QComboBox()
+        self.depth_selector.addItems(["Low (Highest Quality)", "Medium (Balanced)", "High (Max Capacity)"])
+        settings_layout.addWidget(self.depth_selector)
+        right_col.addWidget(settings_group)
         
-        btns = QHBoxLayout()
-        self.hide_btn = QPushButton("🔒 ซ่อนข้อความ (Hide)")
+        grid_layout.addLayout(right_col, 2)
+        main_layout.addLayout(grid_layout)
+
+        # --- Bottom Section: Actions ---
+        action_group = QGroupBox("ACTIONS")
+        action_layout = QHBoxLayout(action_group)
+        
+        self.hide_btn = QPushButton("🔒 Hide Message")
         self.hide_btn.setObjectName("primaryBtn")
-        self.hide_btn.setToolTip("ซ่อนข้อความลงในไฟล์เสียงที่เลือก (LSB)")
         self.hide_btn.clicked.connect(self.process_hide)
         
-        self.extract_btn = QPushButton("🔓 ถอดข้อความ (Extract)")
+        self.extract_btn = QPushButton("🔓 Extract Message")
         self.extract_btn.setObjectName("secondaryBtn")
-        self.extract_btn.setToolTip("ดึงข้อความลับออกจากไฟล์เสียง")
         self.extract_btn.clicked.connect(self.process_extract)
         
-        self.folder_btn = QPushButton("📁 โฟลเดอร์ผลลัพธ์")
-        self.folder_btn.setToolTip("เปิดโฟลเดอร์ที่เก็บไฟล์เสียงที่ซ่อนข้อความแล้ว")
+        self.folder_btn = QPushButton("📁 Output Folder")
         self.folder_btn.clicked.connect(self.open_output_folder)
         
-        btns.addWidget(self.hide_btn)
-        btns.addWidget(self.extract_btn)
-        btns.addWidget(self.folder_btn)
-        action_layout.addLayout(btns)
+        action_layout.addWidget(self.hide_btn)
+        action_layout.addWidget(self.extract_btn)
+        action_layout.addWidget(self.folder_btn)
+        main_layout.addWidget(action_group)
         
+        # Logs
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
-        self.log_output.setPlaceholderText("บันทึกการทำงานจะแสดงที่นี่...")
-        action_layout.addWidget(self.log_output)
-        
-        action_group.setLayout(action_layout)
-        layout.addWidget(action_group)
+        self.log_output.setPlaceholderText("Operation logs...")
+        self.log_output.setMaximumHeight(100)
+        main_layout.addWidget(self.log_output)
         
         self.load_examples()
 

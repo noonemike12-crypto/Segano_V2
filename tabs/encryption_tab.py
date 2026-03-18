@@ -17,90 +17,90 @@ class EncryptionTab(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(20)
-        layout.setContentsMargins(20, 20, 20, 20)
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(30, 30, 30, 30)
 
-        # --- ส่วน AES Encryption ---
-        aes_group = QGroupBox("🔐 การเข้ารหัส AES-256 (Symmetric)")
-        aes_layout = QVBoxLayout()
-        
-        aes_layout.addWidget(QLabel("📝 ข้อความที่ต้องการเข้ารหัส/ถอดรหัส:"))
+        # --- Top Section: Intro ---
+        intro_layout = QVBoxLayout()
+        title = QLabel("Modern Encryption Suite")
+        title.setStyleSheet("font-size: 18pt; font-weight: 800; color: white;")
+        subtitle = QLabel("Secure your sensitive data using high-performance symmetric and asymmetric cryptography.")
+        subtitle.setObjectName("subTitle")
+        intro_layout.addWidget(title)
+        intro_layout.addWidget(subtitle)
+        main_layout.addLayout(intro_layout)
+
+        # --- Middle Section: Main Grid ---
+        grid_layout = QHBoxLayout()
+        grid_layout.setSpacing(30)
+
+        # Left Column: Input Area
+        left_col = QVBoxLayout()
+        input_group = QGroupBox("SOURCE INPUT")
+        input_layout = QVBoxLayout(input_group)
         self.aes_input = QTextEdit()
-        self.aes_input.setPlaceholderText("ใส่ข้อความที่นี่...")
-        aes_layout.addWidget(self.aes_input)
+        self.aes_input.setPlaceholderText("Paste or type the plaintext to encrypt, or the ciphertext to decrypt...")
+        self.aes_input.setMinimumHeight(400)
+        input_layout.addWidget(self.aes_input)
         
-        key_layout = QHBoxLayout()
-        key_layout.addWidget(QLabel("🔑 กุญแจ (Key):"))
-        self.aes_key = QLineEdit()
-        self.aes_key.setPlaceholderText("ใส่กุญแจ 16, 24 หรือ 32 ตัวอักษร")
-        key_layout.addWidget(self.aes_key)
-        
-        self.gen_key_btn = QPushButton("🎲 สุ่มกุญแจ")
-        self.gen_key_btn.clicked.connect(self.generate_aes_key)
-        key_layout.addWidget(self.gen_key_btn)
-        aes_layout.addLayout(key_layout)
-        
-        btns = QHBoxLayout()
-        self.aes_encrypt_btn = QPushButton("🔒 เข้ารหัส AES")
+        btn_row = QHBoxLayout()
+        self.aes_encrypt_btn = QPushButton("🔒 Encrypt Data")
         self.aes_encrypt_btn.setObjectName("primaryBtn")
         self.aes_encrypt_btn.clicked.connect(self.aes_encrypt)
-        
-        self.aes_decrypt_btn = QPushButton("🔓 ถอดรหัส AES")
+        self.aes_decrypt_btn = QPushButton("🔓 Decrypt Data")
         self.aes_decrypt_btn.setObjectName("secondaryBtn")
         self.aes_decrypt_btn.clicked.connect(self.aes_decrypt)
+        btn_row.addWidget(self.aes_encrypt_btn)
+        btn_row.addWidget(self.aes_decrypt_btn)
+        input_layout.addLayout(btn_row)
         
-        btns.addWidget(self.aes_encrypt_btn)
-        btns.addWidget(self.aes_decrypt_btn)
-        aes_layout.addLayout(btns)
-        
-        aes_group.setLayout(aes_layout)
-        layout.addWidget(aes_group)
+        left_col.addWidget(input_group)
+        grid_layout.addLayout(left_col, 3)
 
-        # --- ส่วน RSA Encryption ---
-        rsa_group = QGroupBox("🔑 การเข้ารหัส RSA (Asymmetric)")
-        rsa_layout = QVBoxLayout()
+        # Right Column: Key Management
+        right_col = QVBoxLayout()
         
-        rsa_layout.addWidget(QLabel("📝 ข้อความสำหรับ RSA:"))
-        self.rsa_input = QTextEdit()
-        self.rsa_input.setPlaceholderText("ใส่ข้อความที่นี่...")
-        rsa_layout.addWidget(self.rsa_input)
+        key_group = QGroupBox("KEY MANAGEMENT")
+        key_layout = QVBoxLayout(key_group)
         
-        keys_layout = QHBoxLayout()
+        key_layout.addWidget(QLabel("Encryption Key (Secret):"))
+        self.aes_key = QLineEdit()
+        self.aes_key.setEchoMode(QLineEdit.Password)
+        self.aes_key.setPlaceholderText("Enter security key...")
+        key_layout.addWidget(self.aes_key)
         
-        pub_layout = QVBoxLayout()
-        pub_layout.addWidget(QLabel("📜 กุญแจสาธารณะ (Public Key):"))
-        self.pub_key_text = QTextEdit()
-        pub_layout.addWidget(self.pub_key_text)
-        keys_layout.addLayout(pub_layout)
+        self.gen_key_btn = QPushButton("🎲 Generate Random Key")
+        self.gen_key_btn.clicked.connect(self.generate_aes_key)
+        key_layout.addWidget(self.gen_key_btn)
         
-        priv_layout = QVBoxLayout()
-        priv_layout.addWidget(QLabel("🔐 กุญแจส่วนตัว (Private Key):"))
-        self.priv_key_text = QTextEdit()
-        priv_layout.addWidget(self.priv_key_text)
-        keys_layout.addLayout(priv_layout)
+        key_layout.addSpacing(20)
+        key_layout.addWidget(QLabel("Mode of Operation:"))
+        self.mode_selector = QComboBox()
+        self.mode_selector.addItems(["AES-256-GCM (Recommended)", "AES-256-CBC"])
+        key_layout.addWidget(self.mode_selector)
         
-        rsa_layout.addLayout(keys_layout)
+        right_col.addWidget(key_group)
         
-        rsa_btns = QHBoxLayout()
-        self.gen_rsa_btn = QPushButton("✨ สร้างคู่กุญแจ RSA")
+        # Security Notice
+        notice_group = QGroupBox("SECURITY NOTICE")
+        notice_layout = QVBoxLayout(notice_group)
+        notice_text = QLabel("🛡️ Quantum Safe\nAES-256 remains resilient against current theoretical quantum computing attacks.")
+        notice_text.setWordWrap(True)
+        notice_text.setStyleSheet("color: #0d7ff2; font-size: 9pt; font-weight: 600;")
+        notice_layout.addWidget(notice_text)
+        right_col.addWidget(notice_group)
+        
+        grid_layout.addLayout(right_col, 2)
+        main_layout.addLayout(grid_layout)
+
+        # RSA Section (Simplified for now to fit the new look)
+        rsa_group = QGroupBox("ASYMMETRIC (RSA) MODULE")
+        rsa_layout = QHBoxLayout(rsa_group)
+        self.gen_rsa_btn = QPushButton("✨ Create RSA Keypair")
         self.gen_rsa_btn.clicked.connect(self.generate_rsa_keys)
-        
-        self.rsa_encrypt_btn = QPushButton("🔒 เข้ารหัสด้วย Public Key")
-        self.rsa_encrypt_btn.setObjectName("primaryBtn")
-        self.rsa_encrypt_btn.clicked.connect(self.rsa_encrypt)
-        
-        self.rsa_decrypt_btn = QPushButton("🔓 ถอดรหัสด้วย Private Key")
-        self.rsa_decrypt_btn.setObjectName("secondaryBtn")
-        self.rsa_decrypt_btn.clicked.connect(self.rsa_decrypt)
-        
-        rsa_btns.addWidget(self.gen_rsa_btn)
-        rsa_btns.addWidget(self.rsa_encrypt_btn)
-        rsa_btns.addWidget(self.rsa_decrypt_btn)
-        rsa_layout.addLayout(rsa_btns)
-        
-        rsa_group.setLayout(rsa_layout)
-        layout.addWidget(rsa_group)
+        rsa_layout.addWidget(self.gen_rsa_btn)
+        main_layout.addWidget(rsa_group)
 
         # --- ส่วนแสดงผลลัพธ์รวม ---
         result_group = QGroupBox("📊 ผลลัพธ์ (Output)")

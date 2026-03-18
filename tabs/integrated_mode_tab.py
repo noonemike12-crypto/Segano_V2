@@ -23,49 +23,60 @@ class IntegrationTab(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(15)
-        layout.setContentsMargins(20, 20, 20, 20)
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(30, 30, 30, 30)
 
-        # --- ส่วนเลือกโหมด ---
-        mode_group = QGroupBox("🎛️ โหมดการทำงานรวม (Integrated Modes)")
-        mode_layout = QVBoxLayout()
+        # --- Top Section: Intro ---
+        intro_layout = QVBoxLayout()
+        title = QLabel("Integrated Steganography Engine")
+        title.setStyleSheet("font-size: 18pt; font-weight: 800; color: white;")
+        subtitle = QLabel("Combine multiple encryption and steganography techniques for maximum security and obfuscation.")
+        subtitle.setObjectName("subTitle")
+        intro_layout.addWidget(title)
+        intro_layout.addWidget(subtitle)
+        main_layout.addLayout(intro_layout)
+
+        # --- Middle Section: Main Grid ---
+        grid_layout = QHBoxLayout()
+        grid_layout.setSpacing(30)
+
+        # Left Column: Configuration & Files
+        left_col = QVBoxLayout()
         
+        # Mode Selection
+        mode_group = QGroupBox("STRATEGY SELECTION")
+        mode_layout = QVBoxLayout(mode_group)
         self.mode_selector = QComboBox()
         self.modes = [
-            "🔄 โหมด 1: AES + แบ่งข้อความ (ภาพ + เสียง)",
-            "📄 โหมด 2: DOCX + RSA + Video Metadata",
-            "🎛️ โหมด 3: AES + แบ่ง 3 ส่วน (ภาพ + เสียง + วิดีโอ)",
-            "🧬 โหมด 4: AES + RSA + Metadata",
-            "🧫 โหมด 5: GPG + Metadata + EOF",
-            "🧩 โหมด 6: AES + LSB + Metadata + Checksum",
-            "🔄 โหมด 7: แปลงหลายชั้น + ซ่อนหลายที่",
-            "🧠 โหมด 8: AES + GPG + Multi Media",
-            "🌀 โหมด 9: Nested Stego (ซ้อนหลายชั้น)",
-            "🧾 โหมด 10: Split + Layered + Time-lock"
+            "🔄 Mode 1: AES + Split Payload (Image + Audio)",
+            "📄 Mode 2: DOCX + RSA + Video Metadata",
+            "🎛️ Mode 3: AES + Triple Split (Image + Audio + Video)",
+            "🧬 Mode 4: AES + RSA + Metadata Injection",
+            "🧫 Mode 5: GPG + Metadata + EOF Padding",
+            "🧩 Mode 6: AES + LSB + Metadata + Checksum",
+            "🔄 Mode 7: Multi-Layer Transform + Obfuscation",
+            "🧠 Mode 8: AES + GPG + Cross-Media Sync",
+            "🌀 Mode 9: Nested Stego (Recursive Hiding)",
+            "🧾 Mode 10: Split + Layered + Temporal Lock"
         ]
         self.mode_selector.addItems(self.modes)
         mode_layout.addWidget(self.mode_selector)
         
-        self.mode_desc = QLabel("คำอธิบายโหมดจะแสดงที่นี่...")
+        self.mode_desc = QLabel("Select a strategy to view technical details...")
         self.mode_desc.setWordWrap(True)
-        self.mode_desc.setStyleSheet("color: #ffeb3b; background-color: rgba(255, 235, 59, 0.1); padding: 10px; border-radius: 5px;")
+        self.mode_desc.setStyleSheet("color: #94a3b8; font-size: 9pt; font-style: italic;")
         mode_layout.addWidget(self.mode_desc)
-        
-        mode_group.setLayout(mode_layout)
-        layout.addWidget(mode_group)
+        left_col.addWidget(mode_group)
 
-        # --- ส่วนจัดการไฟล์และข้อความ ---
-        tabs = QTabWidget()
-        
-        # แท็บไฟล์
-        file_tab = QWidget()
-        file_layout = QVBoxLayout(file_tab)
+        # File Management
+        file_group = QGroupBox("CARRIER MANAGEMENT")
+        file_layout = QVBoxLayout(file_group)
         
         file_btns = QHBoxLayout()
-        self.add_file_btn = QPushButton("➕ เพิ่มไฟล์...")
+        self.add_file_btn = QPushButton("➕ Add Carriers")
         self.add_file_btn.clicked.connect(self.add_files)
-        self.clear_files_btn = QPushButton("🗑️ ล้างรายการ")
+        self.clear_files_btn = QPushButton("🗑️ Clear All")
         self.clear_files_btn.setObjectName("dangerBtn")
         self.clear_files_btn.clicked.connect(self.clear_files)
         file_btns.addWidget(self.add_file_btn)
@@ -74,38 +85,53 @@ class IntegrationTab(QWidget):
         
         self.files_table = QTableWidget()
         self.files_table.setColumnCount(3)
-        self.files_table.setHorizontalHeaderLabels(["ชื่อไฟล์", "ประเภท", "ขนาด"])
+        self.files_table.setHorizontalHeaderLabels(["Filename", "Type", "Size"])
         self.files_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.files_table.setMinimumHeight(200)
         file_layout.addWidget(self.files_table)
+        left_col.addWidget(file_group)
         
-        tabs.addTab(file_tab, "📁 ไฟล์ (Files)")
-        
-        # แท็บข้อความ
-        text_tab = QWidget()
-        text_layout = QVBoxLayout(text_tab)
-        self.text_input = QPlainTextEdit()
-        self.text_input.setPlaceholderText("พิมพ์ข้อความที่ต้องการซ่อน...")
-        text_layout.addWidget(self.text_input)
-        tabs.addTab(text_tab, "📝 ข้อความ (Text)")
-        
-        layout.addWidget(tabs)
+        grid_layout.addLayout(left_col, 3)
 
-        # --- ส่วนดำเนินการ ---
-        action_layout = QVBoxLayout()
+        # Right Column: Payload & Execution
+        right_col = QVBoxLayout()
         
-        self.execute_btn = QPushButton("🚀 เริ่มดำเนินการ (Execute)")
+        # Payload Section
+        payload_group = QGroupBox("PAYLOAD INPUT")
+        payload_layout = QVBoxLayout(payload_group)
+        self.text_input = QPlainTextEdit()
+        self.text_input.setPlaceholderText("Enter the sensitive data to be processed...")
+        self.text_input.setMinimumHeight(300)
+        payload_layout.addWidget(self.text_input)
+        right_col.addWidget(payload_group)
+
+        # Execution Control
+        exec_group = QGroupBox("ENGINE CONTROL")
+        exec_layout = QVBoxLayout(exec_group)
+        self.execute_btn = QPushButton("🚀 EXECUTE STRATEGY")
         self.execute_btn.setObjectName("primaryBtn")
-        self.execute_btn.setMinimumHeight(50)
+        self.execute_btn.setMinimumHeight(60)
         self.execute_btn.clicked.connect(self.process_integrated)
-        action_layout.addWidget(self.execute_btn)
+        exec_layout.addWidget(self.execute_btn)
+        right_col.addWidget(exec_group)
+        
+        grid_layout.addLayout(right_col, 2)
+        main_layout.addLayout(grid_layout)
+
+        # Status & Progress
+        status_group = QGroupBox("SYSTEM STATUS")
+        status_layout = QVBoxLayout(status_group)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setValue(0)
+        status_layout.addWidget(self.progress_bar)
         
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
-        self.log_output.setPlaceholderText("บันทึกการทำงานรวม...")
-        action_layout.addWidget(self.log_output)
-        
-        layout.addLayout(action_layout)
-        
+        self.log_output.setMaximumHeight(100)
+        self.log_output.setPlaceholderText("Engine logs...")
+        status_layout.addWidget(self.log_output)
+        main_layout.addWidget(status_group)
+
         self.mode_selector.currentIndexChanged.connect(self.update_desc)
         self.update_desc()
 

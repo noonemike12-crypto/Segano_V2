@@ -118,85 +118,150 @@ def run_app(app):
             self.status_timer.start(2000)
 
         def init_ui(self):
-            main_layout = QVBoxLayout(self)
-            main_layout.setContentsMargins(0, 0, 0, 0)
-            main_layout.setSpacing(0)
+            # Main Layout: Horizontal (Sidebar + Content)
+            main_h_layout = QHBoxLayout(self)
+            main_h_layout.setContentsMargins(0, 0, 0, 0)
+            main_h_layout.setSpacing(0)
 
-            # --- ส่วนหัว (Header) ---
+            # --- Sidebar ---
+            self.sidebar = QFrame()
+            self.sidebar.setObjectName("sidebar")
+            self.sidebar.setFixedWidth(260)
+            sidebar_layout = QVBoxLayout(self.sidebar)
+            sidebar_layout.setContentsMargins(15, 30, 15, 30)
+            sidebar_layout.setSpacing(10)
+
+            # Sidebar Logo/Title
+            logo_layout = QHBoxLayout()
+            logo_icon = QLabel("🛡️")
+            logo_icon.setStyleSheet("font-size: 24pt; color: #0d7ff2;")
+            logo_text_vbox = QVBoxLayout()
+            logo_title = QLabel("StegoTech Pro")
+            logo_title.setStyleSheet("font-weight: 900; font-size: 14pt; color: white;")
+            logo_subtitle = QLabel("Secure Encoding")
+            logo_subtitle.setStyleSheet("font-size: 8pt; color: #94a3b8;")
+            logo_text_vbox.addWidget(logo_title)
+            logo_text_vbox.addWidget(logo_subtitle)
+            logo_layout.addWidget(logo_icon)
+            logo_layout.addLayout(logo_text_vbox)
+            sidebar_layout.addLayout(logo_layout)
+            sidebar_layout.addSpacing(40)
+
+            # Sidebar Buttons
+            self.sidebar_buttons = []
+            menu_items = [
+                ("🖼️ Image Stego", 0),
+                ("🎵 Audio Stego", 1),
+                ("🎬 Video Stego", 2),
+                ("🏷️ Metadata", 3),
+                ("📁 File Stego", 4),
+                ("🔐 Encryption", 5),
+                ("🔑 PGP Keys", 6),
+                ("🔗 Integrated", 7)
+            ]
+
+            for text, idx in menu_items:
+                btn = QPushButton(text)
+                btn.setObjectName("sidebarBtn")
+                btn.setCheckable(True)
+                btn.clicked.connect(lambda checked, i=idx: self.switch_page(i))
+                sidebar_layout.addWidget(btn)
+                self.sidebar_buttons.append(btn)
+
+            sidebar_layout.addStretch()
+
+            # Sidebar Footer (Storage/Status)
+            storage_frame = QFrame()
+            storage_frame.setStyleSheet("background-color: #1e293b; border-radius: 12px; padding: 15px;")
+            storage_layout = QVBoxLayout(storage_frame)
+            storage_title = QLabel("STORAGE")
+            storage_title.setStyleSheet("font-size: 7pt; font-weight: 800; color: #64748b; letter-spacing: 1px;")
+            self.storage_bar = QProgressBar()
+            self.storage_bar.setValue(72)
+            storage_info = QLabel("7.2 GB of 10 GB used")
+            storage_info.setStyleSheet("font-size: 7pt; color: #94a3b8;")
+            storage_layout.addWidget(storage_title)
+            storage_layout.addWidget(self.storage_bar)
+            storage_layout.addWidget(storage_info)
+            sidebar_layout.addWidget(storage_frame)
+
+            main_h_layout.addWidget(self.sidebar)
+
+            # --- Content Area ---
+            self.content_area = QFrame()
+            self.content_area.setObjectName("contentArea")
+            content_v_layout = QVBoxLayout(self.content_area)
+            content_v_layout.setContentsMargins(0, 0, 0, 0)
+            content_v_layout.setSpacing(0)
+
+            # Header in Content Area
             header = QFrame()
-            header.setObjectName("headerFrame")
-            header.setFixedHeight(100)
-            header.setStyleSheet("background-color: #0f172a; border-bottom: 2px solid #1e293b;")
+            header.setFixedHeight(70)
+            header.setStyleSheet("background-color: rgba(16, 25, 34, 0.8); border-bottom: 1px solid #1e293b;")
             header_layout = QHBoxLayout(header)
             header_layout.setContentsMargins(30, 0, 30, 0)
             
-            # Logo in Header
-            logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
-            if os.path.exists(logo_path):
-                logo_label = QLabel()
-                logo_pix = QPixmap(logo_path).scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                logo_label.setPixmap(logo_pix)
-                header_layout.addWidget(logo_label)
-                header_layout.addSpacing(15)
-            
-            title_vbox = QVBoxLayout()
-            title = QLabel("SIENG PRO")
-            title.setObjectName("headerTitle")
-            subtitle = QLabel("ระบบซ่อนข้อมูลและเข้ารหัสลับขั้นสูง (Advanced Steganography & Encryption)")
-            subtitle.setStyleSheet("color: #94a3b8; font-size: 10pt;")
-            title_vbox.addWidget(title)
-            title_vbox.addWidget(subtitle)
-            header_layout.addLayout(title_vbox)
-            
+            self.page_title = QLabel("Dashboard")
+            self.page_title.setStyleSheet("font-size: 14pt; font-weight: 700; color: white;")
+            header_layout.addWidget(self.page_title)
             header_layout.addStretch()
             
-            # ปุ่มช่วยเหลือและตั้งค่า
-            self.help_btn = QPushButton("❓ ช่วยเหลือ")
+            self.help_btn = QPushButton("❓ Help")
             self.help_btn.clicked.connect(self.show_help)
             header_layout.addWidget(self.help_btn)
             
-            main_layout.addWidget(header)
+            content_v_layout.addWidget(header)
 
-            # --- ส่วนเนื้อหา (Tabs) ---
-            content_area = QFrame()
-            content_layout = QVBoxLayout(content_area)
-            content_layout.setContentsMargins(15, 15, 15, 15)
+            # Stacked Widget for Pages
+            self.stack = QStackedWidget()
+            self.stack.addWidget(image_tab.ImageTab())
+            self.stack.addWidget(audio_tab.AudioTab())
+            self.stack.addWidget(video_tab.VideoTab())
+            self.stack.addWidget(info_tab.FileInfoTab())
+            self.stack.addWidget(file_and_FILE.FileAndFileTab())
+            self.stack.addWidget(encryption_tab.EncryptionTab())
+            self.stack.addWidget(pgp_tab.PGPTab())
+            self.stack.addWidget(integrated_mode_tab.IntegrationTab())
             
-            self.tabs = QTabWidget()
-            self.tabs.currentChanged.connect(self.on_tab_changed)
-            self.tabs.addTab(image_tab.ImageTab(), "🖼️ รูปภาพ")
-            self.tabs.addTab(audio_tab.AudioTab(), "🎵 เสียง")
-            self.tabs.addTab(video_tab.VideoTab(), "🎬 วิดีโอ")
-            self.tabs.addTab(info_tab.FileInfoTab(), "🏷️ Metadata")
-            self.tabs.addTab(file_and_FILE.FileAndFileTab(), "📁 ซ่อนไฟล์")
-            self.tabs.addTab(encryption_tab.EncryptionTab(), "🔐 เข้ารหัส")
-            self.tabs.addTab(pgp_tab.PGPTab(), "🔑 PGP")
-            self.tabs.addTab(integrated_mode_tab.IntegrationTab(), "🔗 โหมดรวม")
-            
-            content_layout.addWidget(self.tabs)
-            main_layout.addWidget(content_area)
+            content_v_layout.addWidget(self.stack)
 
-            # --- ส่วนท้าย (Status Bar) ---
+            # Footer
             footer = QFrame()
             footer.setFixedHeight(40)
-            footer.setStyleSheet("background-color: #0f172a; border-top: 1px solid #1e293b;")
+            footer.setStyleSheet("border-top: 1px solid #1e293b;")
             footer_layout = QHBoxLayout(footer)
-            footer_layout.setContentsMargins(20, 0, 20, 0)
+            footer_layout.setContentsMargins(30, 0, 30, 0)
             
-            self.status_label = QLabel("🟢 พร้อมใช้งาน (Ready)")
-            self.status_label.setObjectName("statusReady")
+            self.status_label = QLabel("🟢 System Ready")
+            self.status_label.setStyleSheet("color: #00ff88; font-weight: bold; font-size: 8pt;")
             footer_layout.addWidget(self.status_label)
-            
             footer_layout.addStretch()
-            
-            self.mem_label = QLabel("💾 หน่วยความจำ: 0 MB")
+            self.mem_label = QLabel("💾 Memory: 0 MB")
+            self.mem_label.setStyleSheet("font-size: 8pt; color: #94a3b8;")
             footer_layout.addWidget(self.mem_label)
             
-            version = QLabel("v2.5.0 Professional Edition")
-            version.setStyleSheet("color: #64748b; font-size: 9pt;")
-            footer_layout.addWidget(version)
+            content_v_layout.addWidget(footer)
+            main_h_layout.addWidget(self.content_area)
+
+            # Initial Page
+            self.switch_page(0)
+
+        def switch_page(self, index):
+            self.stack.setCurrentIndex(index)
             
-            main_layout.addWidget(footer)
+            # Update Buttons
+            for i, btn in enumerate(self.sidebar_buttons):
+                btn.setProperty("active", i == index)
+                btn.setChecked(i == index)
+                btn.style().unpolish(btn)
+                btn.style().polish(btn)
+            
+            # Update Page Title
+            titles = ["Image Steganography", "Audio Steganography", "Video Steganography", 
+                      "Metadata Steganography", "File Steganography", "Encryption Module", 
+                      "PGP Key Management", "Integrated Mode"]
+            self.page_title.setText(titles[index])
+            logger.log("info", f"Switched to: {titles[index]}")
 
         def on_tab_changed(self, index):
             tab_name = self.tabs.tabText(index)
@@ -212,13 +277,13 @@ def run_app(app):
 
         def show_help(self):
             msg = QMessageBox()
-            msg.setWindowTitle("ช่วยเหลือ - SIENG PRO")
-            msg.setText("<b>SIENG PRO (Secure Incognito ENcryption Guard)</b><br><br>"
-                       "โปรแกรมนี้ถูกออกแบบมาเพื่อความปลอดภัยของข้อมูลขั้นสูง:<br>"
-                       "- ซ่อนข้อความในไฟล์สื่อต่างๆ (Steganography)<br>"
-                       "- เข้ารหัสข้อมูลด้วยมาตรฐานสากล (AES, RSA, PGP)<br>"
-                       "- จัดการ Metadata และไฟล์ซ้อนไฟล์<br><br>"
-                       "เลือกแท็บด้านบนเพื่อเริ่มใช้งานในแต่ละโหมด")
+            msg.setWindowTitle("Help - StegoTech Pro")
+            msg.setText("<b>StegoTech Pro (Secure Incognito ENcryption Guard)</b><br><br>"
+                       "This application is designed for high-level data security:<br>"
+                       "- Hide data in various media (Steganography)<br>"
+                       "- Encrypt data with global standards (AES, RSA, PGP)<br>"
+                       "- Manage Metadata and File-in-File hiding<br><br>"
+                       "Select a module from the sidebar to begin.")
             msg.exec_()
 
     # Path to logo/icon

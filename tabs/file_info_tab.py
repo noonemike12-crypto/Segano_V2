@@ -19,77 +19,103 @@ class FileInfoTab(QWidget):
         self.setAcceptDrops(True)
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(15)
-        layout.setContentsMargins(20, 20, 20, 20)
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(30, 30, 30, 30)
 
-        # --- ส่วนเลือกไฟล์ ---
-        selection_group = QGroupBox("📁 การเลือกไฟล์ (File Selection)")
-        selection_layout = QHBoxLayout()
+        # --- Top Section: Intro ---
+        intro_layout = QVBoxLayout()
+        title = QLabel("Metadata Steganography")
+        title.setStyleSheet("font-size: 18pt; font-weight: 800; color: white;")
+        subtitle = QLabel("Hide or extract sensitive text payloads within standard file metadata tags.")
+        subtitle.setObjectName("subTitle")
+        intro_layout.addWidget(title)
+        intro_layout.addWidget(subtitle)
+        main_layout.addLayout(intro_layout)
+
+        # --- Middle Section: Main Grid ---
+        grid_layout = QHBoxLayout()
+        grid_layout.setSpacing(30)
+
+        # Left Column: File Selection & Payload
+        left_col = QVBoxLayout()
         
-        self.path_label = QLabel("ลากไฟล์มาวางที่นี่ หรือกดปุ่มเลือกไฟล์")
+        # File Selection
+        selection_group = QGroupBox("SELECT SOURCE FILE")
+        selection_layout = QVBoxLayout(selection_group)
+        self.path_label = QLabel("Click to upload or drag & drop\nJPG, PNG, PDF, or MP3")
         self.path_label.setAlignment(Qt.AlignCenter)
-        self.path_label.setStyleSheet("border: 2px dashed #4a5568; border-radius: 10px; padding: 15px;")
-        selection_layout.addWidget(self.path_label, 3)
+        self.path_label.setMinimumSize(400, 150)
+        self.path_label.setStyleSheet("""
+            border: 2px dashed #1e293b;
+            border-radius: 15px;
+            color: #64748b;
+            font-size: 11pt;
+            background-color: #0b0e14;
+        """)
+        selection_layout.addWidget(self.path_label)
         
-        self.browse_btn = QPushButton("🔍 เลือกไฟล์...")
+        self.browse_btn = QPushButton("📁 Browse Files...")
         self.browse_btn.clicked.connect(self.browse_file)
-        selection_layout.addWidget(self.browse_btn, 1)
-        
-        selection_group.setLayout(selection_layout)
-        layout.addWidget(selection_group)
+        selection_layout.addWidget(self.browse_btn)
+        left_col.addWidget(selection_group)
 
-        # --- ส่วนจัดการ Metadata ---
-        meta_group = QGroupBox("🏷️ การจัดการ Metadata (Metadata Management)")
-        meta_layout = QVBoxLayout()
-        
-        input_row = QHBoxLayout()
-        input_row.addWidget(QLabel("ฟิลด์ (Field):"))
+        # Metadata Target
+        target_group = QGroupBox("SELECT METADATA TARGET")
+        target_layout = QVBoxLayout(target_group)
         self.field_selector = QComboBox()
         self.field_selector.addItems(["comment", "title", "artist", "genre", "album", "description"])
-        input_row.addWidget(self.field_selector, 1)
+        target_layout.addWidget(self.field_selector)
+        left_col.addWidget(target_group)
         
-        input_row.addWidget(QLabel("ข้อความ (Text):"))
+        # Secret Message
+        payload_group = QGroupBox("SECRET MESSAGE")
+        payload_layout = QVBoxLayout(payload_group)
         self.meta_input = QLineEdit()
-        self.meta_input.setPlaceholderText("พิมพ์ข้อความที่ต้องการซ่อนใน Metadata...")
-        input_row.addWidget(self.meta_input, 2)
-        meta_layout.addLayout(input_row)
+        self.meta_input.setPlaceholderText("Enter the text message you wish to hide...")
+        payload_layout.addWidget(self.meta_input)
+        left_col.addWidget(payload_group)
         
-        btns = QHBoxLayout()
-        self.hide_btn = QPushButton("🔒 ซ่อนใน Metadata")
+        grid_layout.addLayout(left_col, 3)
+
+        # Right Column: Details & Actions
+        right_col = QVBoxLayout()
+        
+        # Details Section
+        details_group = QGroupBox("FILE DETAILS")
+        details_layout = QVBoxLayout(details_group)
+        self.details_text = QTextEdit()
+        self.details_text.setReadOnly(True)
+        self.details_text.setPlaceholderText("File metadata details will appear here...")
+        details_layout.addWidget(self.details_text)
+        right_col.addWidget(details_group)
+
+        # Actions Section
+        action_group = QGroupBox("ACTION CONTROL")
+        action_layout = QVBoxLayout(action_group)
+        
+        self.hide_btn = QPushButton("🔒 Hide in Metadata")
         self.hide_btn.setObjectName("primaryBtn")
         self.hide_btn.clicked.connect(self.process_hide)
         
-        self.extract_btn = QPushButton("🔓 ดึงข้อมูล Metadata")
+        self.extract_btn = QPushButton("🔍 Extract Metadata")
         self.extract_btn.setObjectName("secondaryBtn")
         self.extract_btn.clicked.connect(self.process_extract)
         
-        btns.addWidget(self.hide_btn)
-        btns.addWidget(self.extract_btn)
-        meta_layout.addLayout(btns)
+        action_layout.addWidget(self.hide_btn)
+        action_layout.addWidget(self.extract_btn)
+        right_col.addWidget(action_group)
         
-        meta_group.setLayout(meta_layout)
-        layout.addWidget(meta_group)
+        grid_layout.addLayout(right_col, 2)
+        main_layout.addLayout(grid_layout)
 
-        # --- ส่วนแสดงข้อมูลไฟล์ ---
-        info_layout = QHBoxLayout()
-        
-        details_group = QGroupBox("📋 รายละเอียดไฟล์ (File Details)")
-        details_layout = QVBoxLayout()
-        self.details_text = QTextEdit()
-        self.details_text.setReadOnly(True)
-        details_layout.addWidget(self.details_text)
-        details_group.setLayout(details_layout)
-        info_layout.addWidget(details_group, 2)
-        
-        extracted_group = QGroupBox("🔓 ข้อมูลที่พบ (Extracted)")
-        extracted_layout = QVBoxLayout()
+        # Extracted Info
+        extracted_group = QGroupBox("EXTRACTED PAYLOADS")
+        extracted_layout = QVBoxLayout(extracted_group)
         self.extracted_list = QListWidget()
+        self.extracted_list.setMaximumHeight(100)
         extracted_layout.addWidget(self.extracted_list)
-        extracted_group.setLayout(extracted_layout)
-        info_layout.addWidget(extracted_group, 1)
-        
-        layout.addLayout(info_layout)
+        main_layout.addWidget(extracted_group)
 
     def load_file(self, path):
         logger.log("info", f"FileInfoTab: โหลดไฟล์จาก {path}")

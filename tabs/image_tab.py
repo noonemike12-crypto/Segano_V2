@@ -29,113 +29,124 @@ class ImageTab(QWidget):
         self.setAcceptDrops(True)
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(15)
-        layout.setContentsMargins(20, 20, 20, 20)
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(30, 30, 30, 30)
 
-        # --- ส่วนเลือกภาพและตั้งค่า ---
-        config_group = QGroupBox("🖼️ การเลือกภาพและตั้งค่า (Image Selection & Config)")
-        config_layout = QGridLayout()
-        
-        config_layout.addWidget(QLabel("📁 เลือกภาพตัวอย่าง:"), 0, 0)
-        self.example_selector = QComboBox()
-        self.example_selector.setPlaceholderText("เลือกภาพตัวอย่าง...")
-        self.load_example_list()
-        self.example_selector.currentIndexChanged.connect(self.load_example_image)
-        config_layout.addWidget(self.example_selector, 0, 1)
-        
-        self.browse_btn = QPushButton("🔍 เลือกไฟล์ภาพ...")
-        self.browse_btn.clicked.connect(self.browse_image)
-        config_layout.addWidget(self.browse_btn, 0, 2)
-        
-        config_layout.addWidget(QLabel("⚙️ โหมดการซ่อน:"), 1, 0)
-        self.mode_selector = QComboBox()
-        self.mode_selector.addItems([
-            "🔹 LSB (มาตรฐาน)", 
-            "🔍 Alpha Channel (PNG)", 
-            "📐 Edge Detection (ขอบภาพ)",
-            "📡 DCT (ความถี่ภาพ - ทนทานสูง)"
-        ])
-        self.mode_selector.currentIndexChanged.connect(self.update_capacity)
-        config_layout.addWidget(self.mode_selector, 1, 1, 1, 2)
-        
-        config_group.setLayout(config_layout)
-        layout.addWidget(config_group)
+        # --- Top Section: Intro ---
+        intro_layout = QVBoxLayout()
+        title = QLabel("Embed Hidden Data in Images")
+        title.setStyleSheet("font-size: 18pt; font-weight: 800; color: white;")
+        subtitle = QLabel("Securely hide encrypted messages within high-definition image carriers.")
+        subtitle.setObjectName("subTitle")
+        intro_layout.addWidget(title)
+        intro_layout.addWidget(subtitle)
+        main_layout.addLayout(intro_layout)
 
-        # --- ส่วนแสดงผลและข้อความ ---
-        content_layout = QHBoxLayout()
+        # --- Middle Section: Main Grid ---
+        grid_layout = QHBoxLayout()
+        grid_layout.setSpacing(30)
+
+        # Left Column: Preview
+        left_col = QVBoxLayout()
+        preview_group = QGroupBox("CARRIER IMAGE PREVIEW")
+        preview_layout = QVBoxLayout(preview_group)
         
-        # ฝั่งซ้าย: พรีวิวภาพ
-        preview_frame = QFrame()
-        preview_frame.setFrameShape(QFrame.StyledPanel)
-        preview_layout = QVBoxLayout(preview_frame)
-        
-        preview_layout.addWidget(QLabel("🖼️ ตัวอย่างภาพ:"))
-        self.image_preview = QLabel("🖼️ ลากภาพมาวางที่นี่\nหรือกดปุ่มเลือกไฟล์")
+        self.image_preview = QLabel("Drag & Drop Image Here")
         self.image_preview.setAlignment(Qt.AlignCenter)
-        self.image_preview.setFixedSize(400, 300)
+        self.image_preview.setMinimumSize(400, 300)
         self.image_preview.setStyleSheet("""
-            border: 2px dashed #4a5568;
+            border: 2px dashed #1e293b;
             border-radius: 15px;
-            color: #718096;
-            font-size: 14pt;
-            background-color: #1a202c;
+            color: #64748b;
+            font-size: 12pt;
+            background-color: #0b0e14;
         """)
         preview_layout.addWidget(self.image_preview)
         
-        self.capacity_label = QLabel("📊 ความจุ: 0 บิต | ใช้ไป: 0 บิต")
+        self.capacity_label = QLabel("📊 Capacity: 0 bits | Used: 0 bits")
         self.capacity_label.setAlignment(Qt.AlignCenter)
+        self.capacity_label.setStyleSheet("color: #94a3b8; font-size: 9pt; margin-top: 10px;")
         preview_layout.addWidget(self.capacity_label)
         
-        content_layout.addWidget(preview_frame)
+        left_col.addWidget(preview_group)
         
-        # ฝั่งขวา: ข้อความลับ
-        message_frame = QFrame()
-        message_layout = QVBoxLayout(message_frame)
+        # File Selection Buttons
+        file_btns = QHBoxLayout()
+        self.browse_btn = QPushButton("🔍 Browse Files...")
+        self.browse_btn.clicked.connect(self.browse_image)
+        self.example_selector = QComboBox()
+        self.example_selector.setPlaceholderText("Select Example...")
+        self.load_example_list()
+        self.example_selector.currentIndexChanged.connect(self.load_example_image)
         
-        message_layout.addWidget(QLabel("✏️ ข้อความลับ:"))
-        self.message_input = QTextEdit()
-        self.message_input.setPlaceholderText("พิมพ์ข้อความที่ต้องการซ่อนที่นี่...")
-        self.message_input.textChanged.connect(self.update_capacity)
-        message_layout.addWidget(self.message_input)
+        file_btns.addWidget(self.browse_btn)
+        file_btns.addWidget(self.example_selector)
+        left_col.addLayout(file_btns)
         
-        message_layout.addWidget(QLabel("📤 ผลลัพธ์:"))
-        self.result_output = QTextEdit()
-        self.result_output.setReadOnly(True)
-        self.result_output.setPlaceholderText("ผลลัพธ์การถอดรหัสจะแสดงที่นี่...")
-        message_layout.addWidget(self.result_output)
-        
-        content_layout.addWidget(message_frame)
-        layout.addLayout(content_layout)
+        grid_layout.addLayout(left_col, 3)
 
-        # --- ส่วนปุ่มดำเนินการ ---
-        action_group = QGroupBox("🛠️ การดำเนินการ (Actions)")
-        action_layout = QHBoxLayout()
+        # Right Column: Payload & Settings
+        right_col = QVBoxLayout()
         
-        self.hide_btn = QPushButton("🔒 ซ่อนข้อความ (Hide)")
+        # Payload Section
+        payload_group = QGroupBox("PAYLOAD CONFIGURATION")
+        payload_layout = QVBoxLayout(payload_group)
+        payload_layout.addWidget(QLabel("Secret Message:"))
+        self.message_input = QTextEdit()
+        self.message_input.setPlaceholderText("Type the message you want to hide...")
+        self.message_input.textChanged.connect(self.update_capacity)
+        payload_layout.addWidget(self.message_input)
+        right_col.addWidget(payload_group)
+
+        # Settings Section
+        settings_group = QGroupBox("ENCODING PARAMETERS")
+        settings_layout = QVBoxLayout(settings_group)
+        settings_layout.addWidget(QLabel("Steganography Mode:"))
+        self.mode_selector = QComboBox()
+        self.mode_selector.addItems([
+            "🔹 LSB (Standard)", 
+            "🔍 Alpha Channel (PNG)", 
+            "📐 Edge Detection",
+            "📡 DCT (Frequency)"
+        ])
+        self.mode_selector.currentIndexChanged.connect(self.update_capacity)
+        settings_layout.addWidget(self.mode_selector)
+        right_col.addWidget(settings_group)
+        
+        grid_layout.addLayout(right_col, 2)
+        main_layout.addLayout(grid_layout)
+
+        # --- Bottom Section: Actions ---
+        action_group = QGroupBox("ACTIONS")
+        action_layout = QHBoxLayout(action_group)
+        
+        self.hide_btn = QPushButton("🔒 Hide Message & Generate")
         self.hide_btn.setObjectName("primaryBtn")
-        self.hide_btn.setToolTip("ซ่อนข้อความลงในภาพที่เลือกด้วยโหมดที่กำหนด")
         self.hide_btn.clicked.connect(self.process_hide)
         
-        self.extract_btn = QPushButton("🔍 ถอดข้อความ (Auto-Scan All)")
+        self.extract_btn = QPushButton("🔍 Auto-Scan & Extract")
         self.extract_btn.setObjectName("secondaryBtn")
-        self.extract_btn.setToolTip("ค้นหาข้อความที่ซ่อนอยู่ในภาพด้วยทุกโหมดอัตโนมัติ")
         self.extract_btn.clicked.connect(self.process_extract)
         
-        self.folder_btn = QPushButton("📁 เปิดโฟลเดอร์ผลลัพธ์")
-        self.folder_btn.setToolTip("เปิดโฟลเดอร์ที่เก็บไฟล์ภาพที่ซ่อนข้อความแล้ว")
+        self.folder_btn = QPushButton("📁 Open Output Folder")
         self.folder_btn.clicked.connect(self.open_output_folder)
         
         action_layout.addWidget(self.hide_btn)
         action_layout.addWidget(self.extract_btn)
         action_layout.addWidget(self.folder_btn)
+        main_layout.addWidget(action_group)
         
-        action_group.setLayout(action_layout)
-        layout.addWidget(action_group)
-        
+        # Progress Bar & Logs
         self.progress_bar = QProgressBar()
-        self.progress_bar.setFormat("⏳ กำลังดำเนินการ... %p%")
-        layout.addWidget(self.progress_bar)
+        self.progress_bar.setFormat("Processing... %p%")
+        main_layout.addWidget(self.progress_bar)
+        
+        self.result_output = QTextEdit()
+        self.result_output.setReadOnly(True)
+        self.result_output.setPlaceholderText("Operation logs will appear here...")
+        self.result_output.setMaximumHeight(100)
+        main_layout.addWidget(self.result_output)
 
     def load_example_list(self):
         base_dir = os.path.dirname(os.path.dirname(__file__))
